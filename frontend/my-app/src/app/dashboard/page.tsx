@@ -2,11 +2,25 @@
 import Profiles from "../components/Profiles";
 import Sidebar from "../components/Sidebar";
 
+
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 
 export default function Dashboard() {
   const router = useRouter();
-  
+  useEffect(() => {
+    // Check if token exists in localStorage
+    const token = localStorage.getItem("token");
+    if (!token) {
+      // If not logged in → redirect to login
+      router.push("/");
+    }
+  }, [router]);
+
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    router.push("/login");
+  };
   const buttonTexts = [
     "Gabriel Yu",
     "Jamie Seoh",

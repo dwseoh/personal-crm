@@ -1,55 +1,64 @@
-# app/routes/contacts.py
 from fastapi import APIRouter, Depends, HTTPException
-from typing import List
 from pydantic import BaseModel
-from app.db import supabase_client
-from app.auth import get_current_user
+from db import supabase_client
+from auth import get_current_user
 
-router = APIRouter(
-    prefix="/contacts",
-    tags=["contacts"]
-)
+router = APIRouter(prefix="/contacts", tags=["contacts"])
 
-# Pydantic models
-class ContactCreate(BaseModel):
+
+# ---------------------------
+# Models
+# ---------------------------
+class ContactRequest(BaseModel):
     name: str
-    email: str = None
-    phone: str = None
-    data: dict = {}
+    email: str | None = None
+    phone: str | None = None
+    notes: str | None = None
 
-class ContactOut(ContactCreate):
-    id: str
-    user_id: str
-    created_at: str
 
+# ---------------------------
 # Routes
-@router.post("/", response_model=ContactOut)
-def create_contact(contact: ContactCreate, current_user=Depends(get_current_user)):
-    result = supabase_client.table("contacts").insert({
-        "user_id": current_user["id"],
-        "name": contact.name,
-        "email": contact.email,
-        "phone": contact.phone,
-        "data": contact.data
-    }).execute()
+# ---------------------------
 
-    if result.status_code != 201:
-        raise HTTPException(status_code=400, detail="Failed to create contact")
+@router.get("/")
+def list_contacts(user=Depends(get_current_user)):
+    try:
+        response = supabase_client.table("contacts") \
+            .select("*") \
+            .eq("user_id", user.id) \
+            .execute()
+        return response.data
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching contacts: {str(e)}")
 
-    return result.data[0]
 
-@router.get("/", response_model=List[ContactOut])
-def list_contacts(current_user=Depends(get_current_user)):
-    result = supabase_client.table("contacts").select("*").eq("user_id", current_user["id"]).execute()
-    return result.data
+@router.post("/")
+def create_contact(request: ContactRequest, user=Depends(get_current_user)):
+    try:
+        response = supabase_client.table("contacts").insert({
+            "user_id": user.id,
+            "name": request.name,
+            "email": request.email,
+            "phone": request.phone,
+            "notes": request.notes
+        }).execute()
+        return response.data
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error creating contact: {str(e)}")
 
-@router.get("/{contact_id}", response_model=ContactOut)
-def get_contact(contact_id: str, current_user=Depends(get_current_user)):
-    result = supabase_client.table("contacts").select("*")\
-        .eq("id", contact_id)\
-        .eq("user_id", current_user["id"]).execute()
 
-    if not result.data:
-        raise HTTPException(status_code=404, detail="Contact not found")
+@router.delete("/{contact_id}")
+def delete_contact(contact_id: int, user=Depends(get_current_user)):
+    try:
+        response = supabase_client.table("contacts") \
+            .delete() \
+            .eq("id", contact_id) \
+            .eq("user_id", user.id) \
+            .execute()
 
-    return result.data[0]
+        if not response.data:
+            raise HTTPException(status_code=404, detail="Contact not found")
+
+        return {"message": "Contact deleted"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error deleting contact: {str(e)}")

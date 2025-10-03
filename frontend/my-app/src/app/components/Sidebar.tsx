@@ -6,7 +6,14 @@ import Link from "next/link";
 
 export default function Sidebar() {
   const [isOpen, setIsOpen] = useState(false);
-    const router = useRouter();
+  const router = useRouter();
+  const handleLogout = () => {
+    // Remove token
+    localStorage.removeItem("token");
+
+    // Redirect to login or home
+    router.push("/login");
+  };
   return (
     <>
       {/* Toggle button (fixed top-left corner) */}
@@ -34,8 +41,13 @@ export default function Sidebar() {
             Settings
           </button>
           <button 
-            onClick={() => router.push("/")}
-            className="fixed px-4 bottom-7 text-left hover:bg-gray-700 rounded">
+          onClick={() => router.push("/")}
+          className="px-4 py-2 text-left hover:bg-gray-700 rounded">
+            Home
+          </button>
+          <button 
+            onClick={handleLogout}
+            className="px-4 bottom-7 text-left hover:bg-gray-700 rounded">
             Logout
           </button>
         </div>

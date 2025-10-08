@@ -53,9 +53,9 @@ export default function Dashboard() {
         Add
       </button>
       <Sidebar />
-      <div className="grid grid-cols-5 gap-4 p-10 translate-y-15">
+      <div className="relative min-h-screen grid grid-cols-5 gap-4 p-10">
         {buttonTexts.map((text, index) => (
-          <Profiles key={index} name={text} onClick={() => alert(text)} />
+          <Profiles key={index} name={text}/>
         ))}
       </div>
     </main>

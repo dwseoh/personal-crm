@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import ResendVerification from "../components/ResendVerification";
 
 
 export default function LoginPage() {
@@ -10,14 +10,25 @@ export default function LoginPage() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
-  const [showPassword, setShowPassword] = useState(false); // ✅ show/hide state
+  const [showPassword, setShowPassword] = useState(false);
+  const [verificationSuccess, setVerificationSuccess] = useState(false);
+  
+  const searchParams = useSearchParams();
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (token) {
       // User is already logged in → redirect to dashboard
       router.push("/dashboard");
     }
-  }, [router]);
+
+    // Check if user came from email verification
+    const verified = searchParams.get('verified');
+    if (verified === 'true') {
+      setVerificationSuccess(true);
+      // Clear the URL parameter after showing the message
+      setTimeout(() => setVerificationSuccess(false), 5000);
+    }
+  }, [router, searchParams]);
   const handleLogin = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
 
@@ -53,6 +64,19 @@ export default function LoginPage() {
   return (
     <main className="flex flex-col items-center bg-slate-900 justify-center min-h-screen gap-6">
       <h1 className="text-2xl font-bold text-white">Login</h1>
+
+      {/* Verification Success Message */}
+      {verificationSuccess && (
+        <div className="bg-green-100 border-2 border-green-400 text-green-800 px-6 py-4 rounded-lg w-80 text-center shadow-lg">
+          <div className="flex items-center justify-center mb-2">
+            <svg className="h-6 w-6 text-green-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
+            </svg>
+            <p className="font-bold">Email Verified Successfully!</p>
+          </div>
+          <p className="text-sm text-green-700">Your account is now active. Please log in below.</p>
+        </div>
+      )}
 
       <form onSubmit={handleLogin} className="flex flex-col gap-4 items-center">
         {/* Username */}
@@ -94,6 +118,9 @@ export default function LoginPage() {
           Login
         </button>
       </form>
+
+      {/* Resend Verification */}
+      <ResendVerification />
 
       {/* Back button */}
       <button

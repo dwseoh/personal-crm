@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
-from app.db import supabase_client
+from app.core.database import supabase_client
 from app.auth import get_current_user
 
 router = APIRouter(prefix="/contacts", tags=["contacts"])

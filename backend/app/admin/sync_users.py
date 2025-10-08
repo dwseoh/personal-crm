@@ -5,10 +5,10 @@ User Sync Script - Run this to manually sync users between Supabase Auth and you
 import sys
 import os
 
-# Add the app directory to the path
-sys.path.append(os.path.join(os.path.dirname(__file__), 'app'))
+# Add the parent directories to the path so we can import from backend
+sys.path.append(os.path.join(os.path.dirname(__file__), '../..'))
 
-from app.auth_sync import AuthSyncManager, sync_all
+from app.core.auth_sync import AuthSyncManager, sync_all
 import logging
 
 # Set up logging

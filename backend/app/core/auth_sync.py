@@ -1,7 +1,7 @@
 """
 Auth Sync Module - Handles synchronization between Supabase Auth and custom users table
 """
-from app.db import supabase_client, supabase_admin
+from app.core.database import supabase_client, supabase_admin
 from datetime import datetime, timezone
 import logging
 

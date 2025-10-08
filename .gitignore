@@ -41,3 +41,5 @@ backend/.env
 
 backend/app/__pycache__/
 .vscode/
+*/__pycache__/
+*__pycache__/

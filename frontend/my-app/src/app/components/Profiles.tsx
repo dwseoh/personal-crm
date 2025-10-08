@@ -5,7 +5,7 @@ interface ProfilesProps {
   name: string;
 }
 
-export default function Profiles({ name }: ProfilesProps) {
+export default function Profiles({name}: ProfilesProps) {
   const [isOpen, setIsOpen] = useState(false);
 
   return (

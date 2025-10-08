@@ -136,7 +136,7 @@ def login(request: LoginRequest):
         if not auth_response.session or not auth_response.session.access_token:
             raise HTTPException(status_code=401, detail="Login failed")
 
-        return {"access_token": auth_response.session.access_token, "token_type": "bearer"}
+        return {"access_token": auth_response.session.access_token, "token_type": "bearer", "user_id": auth_response.user.id}
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Login error: {str(e)}")

@@ -1,43 +1,65 @@
 "use client";
 import Profiles from "../components/Profiles";
 import Sidebar from "../components/Sidebar";
+import Add from "../components/Add";
 
-
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 export default function Dashboard() {
   const router = useRouter();
+  interface Contact {
+    name: string;
+    email: string;
+    phone: string;
+  }
+
+  const [contacts, setContacts] = useState<Contact[]>([]);
+  let contactStrings: any[][] = [];
+
   useEffect(() => {
-    // Check if token exists in localStorage
     const token = localStorage.getItem("token");
     if (!token) {
-      // If not logged in → redirect to login
       router.push("/");
+      return;
     }
+
+    fetch("http://127.0.0.1:8000/contacts/", {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    })
+      .then(async (res) => {
+        if (!res.ok) {
+          const errData = await res.json();
+          console.error("Error:", errData);
+          if (errData.detail?.includes("expired")) {
+            localStorage.removeItem("token");
+            localStorage.removeItem("username");
+            localStorage.removeItem("user_id");
+            router.push("/login");
+          }
+          throw new Error(errData.detail || "Failed to fetch contacts");
+        }
+        return res.json();
+      })
+      .then((data) => {
+        if (Array.isArray(data)) setContacts(data);
+        else setContacts([]);
+      })
+      .catch((err) => console.error(err));
   }, [router]);
 
-  const handleLogout = () => {
-    localStorage.removeItem("token");
-    router.push("/login");
-  };
-  const buttonTexts = [
-    "Gabriel Yu",
-    "Jamie Seoh",
-    "Charlie Kirk",
-    "Paul Ward",
-    "Trump",
-    "Obama",
-    "1",
-    "2",
-    "3",
-    "4",
-    "5",
-    "6",
-    "7",
-    "8",
-    "9",
-  ];
+  if (contacts) {
+    contactStrings = contacts.map((contact: any) => [
+      contact.name,
+      contact.email,
+      contact.phone,
+    ]);
+  } else {
+    contactStrings = [["No contacts", "Add contacts", "to see them here"]];
+  }
 
   return (
     <main className="relative min-h-screen p-8 bg-slate-900">
@@ -49,13 +71,16 @@ export default function Dashboard() {
       </p>
 
       {/* Button in bottom-right */}
-      <button className="fixed bottom-4 right-4 px-4 py-2 bg-white rounded-full text-black w-30 z-40">
-        Add
-      </button>
+      <Add />
       <Sidebar />
       <div className="relative min-h-screen grid grid-cols-5 gap-4 p-10">
-        {buttonTexts.map((text, index) => (
-          <Profiles key={index} name={text}/>
+        {contactStrings.map((text, index) => (
+          <Profiles
+            key={index}
+            name={text[0]}
+            email={text[1]}
+            phone={text[2]}
+          />
         ))}
       </div>
     </main>

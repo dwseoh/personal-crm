@@ -46,15 +46,16 @@ export default function LoginPage() {
         },
         body: JSON.stringify({ email: username, password }),
       });
-
+      
       if (!res.ok) {
         const errorData = await res.json();
         //router.push("/dashboard"); // **REMOVE THIS LATER**
         throw new Error(errorData.detail || "Login failed");
       }
-
       const data = await res.json();
       localStorage.setItem("token", data.access_token);
+      localStorage.setItem("user_id", data.user_id);
+      localStorage.setItem("username", username);
       router.push("/dashboard");
     } catch (err: any) {
       setError(err.message);

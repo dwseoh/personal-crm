@@ -3,9 +3,11 @@ import { useState } from "react";
 
 interface ProfilesProps {
   name: string;
+  email: string;
+  phone: string;
 }
 
-export default function Profiles({name}: ProfilesProps) {
+export default function Profiles({name, email, phone}: ProfilesProps) {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
@@ -20,7 +22,7 @@ export default function Profiles({name}: ProfilesProps) {
 
       {/* Popup overlay */}
       {isOpen && (
-        <div className="fixed inset-0 bg-opacity-50 flex items-center justify-center z-35">
+        <div className="fixed inset-0 bg-opacity-50 flex items-center justify-center z-45">
           <div className="bg-white p-6 w-300 h-150 rounded-xl shadow-lg relative w-80">
             {/* Close button */}
             <button
@@ -32,7 +34,9 @@ export default function Profiles({name}: ProfilesProps) {
 
             {/* Profile content */}
             <h2 className="text-xl font-bold text-black mb-4">Profile</h2>
-            <p className="text-gray-700">{name}</p>
+            <p className="text-black">{name}</p>
+            <p className="text-black">{email}</p>
+            <p className="text-black">{phone}</p>
           </div>
         </div>
       )}

@@ -1,8 +1,7 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-
 
 export default function Sidebar() {
   const [isOpen, setIsOpen] = useState(false);
@@ -10,10 +9,22 @@ export default function Sidebar() {
   const handleLogout = () => {
     // Remove token
     localStorage.removeItem("token");
+    localStorage.removeItem("username");
+    localStorage.removeItem("user_id");
 
     // Redirect to login or home
     router.push("/login");
   };
+  const [username, setUsername] = useState<string | null>(null);
+  const [uuid, setUuid] = useState<string | null>(null);
+  useEffect(() => {
+    // Try to get username from localStorage
+    const storedUsername = localStorage.getItem("username");
+    const uuid = localStorage.getItem("user_id");
+    if (storedUsername) setUsername(storedUsername);
+    if (uuid) setUuid(uuid);
+  }, []);
+
   return (
     <>
       {/* Toggle button (fixed top-left corner) */}
@@ -40,16 +51,21 @@ export default function Sidebar() {
           <button className="px-4 py-2 text-left hover:bg-gray-700 rounded">
             Settings
           </button>
-          <button 
-          onClick={() => router.push("/")}
-          className="px-4 py-2 text-left hover:bg-gray-700 rounded">
+          <button
+            onClick={() => router.push("/")}
+            className="px-4 py-2 text-left hover:bg-gray-700 rounded"
+          >
             Home
           </button>
-          <button 
+          <button
             onClick={handleLogout}
-            className="px-4 bottom-7 text-left hover:bg-gray-700 rounded">
+            className="px-4 py-2 text-left hover:bg-gray-700 rounded"
+          >
             Logout
           </button>
+          <p className="px-4 py-10 text-left text-white">{username}</p>
+          <p className="px-4 py-10 text-left text-white">{uuid}</p>
+
         </div>
       </div>
     </>

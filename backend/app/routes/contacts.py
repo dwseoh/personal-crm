@@ -1,6 +1,7 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 from app.core.database import supabase_client
+from app.core.rate_limiter import limiter, RateLimits
 from app.auth import get_current_user
 
 router = APIRouter(prefix="/contacts", tags=["contacts"])
@@ -27,7 +28,8 @@ class editContactRequest(BaseModel):
 # ---------------------------
 
 @router.get("/")
-def list_contacts(user=Depends(get_current_user)):
+@limiter.limit(RateLimits.CONTACTS)
+def list_contacts(request: Request, user=Depends(get_current_user)):
     try:
         response = supabase_client.table("contacts") \
             .select("*") \
@@ -40,14 +42,15 @@ def list_contacts(user=Depends(get_current_user)):
 
 
 @router.post("/")
-def create_contact(request: ContactRequest, user=Depends(get_current_user)):
+@limiter.limit(RateLimits.CONTACTS)
+def create_contact(contact_request: ContactRequest, request: Request, user=Depends(get_current_user)):
     try:
         response = supabase_client.table("contacts").insert({
             "user_id": user.id,
-            "name": request.name,
-            "email": request.email,
-            "phone": request.phone,
-            "notes": request.notes
+            "name": contact_request.name,
+            "email": contact_request.email,
+            "phone": contact_request.phone,
+            "notes": contact_request.notes
         }).execute()
         return response.data
     except Exception as e:
@@ -55,7 +58,8 @@ def create_contact(request: ContactRequest, user=Depends(get_current_user)):
 
 
 @router.delete("/{contact_id}")
-def delete_contact(contact_id: int, user=Depends(get_current_user)):
+@limiter.limit(RateLimits.CONTACTS)
+def delete_contact(contact_id: int, request: Request, user=Depends(get_current_user)):
     try:
         response = supabase_client.table("contacts") \
             .delete() \
@@ -72,11 +76,12 @@ def delete_contact(contact_id: int, user=Depends(get_current_user)):
 
 
 @router.patch("/{contact_id}")
-def edit_contact(contact_id: int, request: editContactRequest, user=Depends(get_current_user)):
+@limiter.limit(RateLimits.CONTACTS)
+def edit_contact(contact_id: int, edit_request: editContactRequest, request: Request, user=Depends(get_current_user)):
     try:
         # Create update dictionary with only non-None values
         update_data = {
-            k: v for k, v in request.dict().items() 
+            k: v for k, v in edit_request.dict().items() 
             if v is not None
         }
         

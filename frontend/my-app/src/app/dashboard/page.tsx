@@ -12,6 +12,7 @@ export default function Dashboard() {
     name: string;
     email: string;
     phone: string;
+    notes: string;
   }
 
   const [contacts, setContacts] = useState<Contact[]>([]);
@@ -56,6 +57,7 @@ export default function Dashboard() {
       contact.name,
       contact.email,
       contact.phone,
+      contact.notes
     ]);
   } else {
     contactStrings = [["No contacts", "Add contacts", "to see them here"]];
@@ -80,6 +82,7 @@ export default function Dashboard() {
             name={text[0]}
             email={text[1]}
             phone={text[2]}
+            notes={text[3]}
           />
         ))}
       </div>

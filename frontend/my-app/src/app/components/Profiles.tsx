@@ -5,9 +5,10 @@ interface ProfilesProps {
   name: string;
   email: string;
   phone: string;
+  notes: string;
 }
 
-export default function Profiles({name, email, phone}: ProfilesProps) {
+export default function Profiles({name, email, phone, notes}: ProfilesProps) {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
@@ -37,6 +38,7 @@ export default function Profiles({name, email, phone}: ProfilesProps) {
             <p className="text-black">{name}</p>
             <p className="text-black">{email}</p>
             <p className="text-black">{phone}</p>
+            <p className="text-black">{notes}</p>
           </div>
         </div>
       )}

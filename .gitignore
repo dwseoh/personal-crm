@@ -38,6 +38,7 @@ next-env.d.ts
 # venv
 backend/venv
 backend/.env
+venv/
 
 backend/app/__pycache__/
 .vscode/

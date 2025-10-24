@@ -298,6 +298,7 @@ button:hover {
 .hover\:text-primary-content:hover {
   color: var(--color-primary-content);
 }
+
 .hover\:text-error-content:hover {
   color: var(--color-error-content);
 }
@@ -316,4 +317,42 @@ button:hover {
 }
 .hover\:border-base-300:hover {
   border-color: var(--color-base-300);
+}
+
+/* Search bar enhancements */
+.search-bar {
+  position: relative;
+  transition: all 0.2s ease-in-out;
+}
+
+.search-bar:focus-within {
+  transform: scale(1.02);
+}
+
+.search-bar input:focus {
+  box-shadow: 0 0 0 3px var(--color-primary) / 0.1;
+}
+
+/* Search results highlighting */
+.search-highlight {
+  background-color: var(--color-warning);
+  color: var(--color-warning-content);
+  padding: 0.125rem 0.25rem;
+  border-radius: 0.25rem;
+  font-weight: 600;
+}
+
+/* Keyboard shortcut styling */
+.kbd {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1;
+  color: var(--color-base-content);
+  background-color: var(--color-base-300);
+  border: 1px solid var(--color-base-300);
+  border-radius: 0.375rem;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
 }

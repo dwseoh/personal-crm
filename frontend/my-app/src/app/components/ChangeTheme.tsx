@@ -9,7 +9,7 @@ export default function ChangeTheme() {
     <div className="absolute top-4 right-4 sm:top-8 sm:right-8 z-10">
         <button
           onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-          className="p-3 rounded-lg bg-base-200 hover:bg-base-300 text-base-content transition-all duration-200 border border-base-300"
+          className="p-3 rounded-lg cursor-pointer bg-base-200 hover:bg-base-300 text-base-content transition-all duration-200 border border-base-300"
           aria-label="Toggle theme"
         >
           {theme === "dark" ? (

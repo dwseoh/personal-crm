@@ -16,7 +16,7 @@ export default function Profiles({name, email, phone, notes}: ProfilesProps) {
       {/* Button to open popup */}
       <button
         onClick={() => setIsOpen(true)}
-        className="px-4 py-2 h-55 bg-blue-500 text-white rounded-2xl hover:bg-blue-600"
+        className="px-4 py-2 h-55 bg-primary text-primary-content rounded-2xl hover:bg-blue-600 cursor-pointer"
       >
         {name}
       </button>

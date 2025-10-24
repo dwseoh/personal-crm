@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import {useRouter} from "next/navigation";
+import { useRouter } from "next/navigation";
 
 export default function Add() {
   const router = useRouter();
@@ -11,9 +11,10 @@ export default function Add() {
   const [notes, setNotes] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const token = typeof window !== "undefined" ? localStorage.getItem("token") : null; 
+  const token =
+    typeof window !== "undefined" ? localStorage.getItem("token") : null;
   const [success, setSuccess] = useState(false);
-  
+
   const addContact = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     setError(null);
@@ -30,7 +31,7 @@ export default function Add() {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ name, email, phone, notes}),
+        body: JSON.stringify({ name, email, phone, notes }),
       });
 
       if (!res.ok) {
@@ -47,8 +48,6 @@ export default function Add() {
       setIsOpen(false);
       router.refresh();
       window.location.reload();
-
-    
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -60,7 +59,7 @@ export default function Add() {
     <>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="fixed bottom-4 right-4 px-4 py-2 bg-white hover:bg-gray-300 rounded-full text-black z-50"
+        className="fixed bottom-4 right-4 px-4 py-2 cursor-pointer bg-secondary text-secondary-content hover:opacity-90 rounded-full text-black z-50"
       >
         Add
       </button>
@@ -70,21 +69,31 @@ export default function Add() {
           isOpen ? "block" : "hidden"
         }`}
       >
-        <div className="bg-white p-6 w-300 h-150 rounded-xl shadow-lg relative w-80">
+        <div className="bg-base-300 p-6 w-300 h-150 rounded-xl relative w-80">
           {/* Close button */}
           <button
-            onClick={() => setIsOpen(false)}
-            className="absolute top-2 right-2 text-gray-500 hover:text-black"
+            onClick={() => {
+              setIsOpen(false);
+              setName("");
+              setEmail("");
+              setPhone("");
+              setNotes("");
+              setError(null);
+              setSuccess(false);
+            }}
+            className="absolute top-2 right-2 text-base-content hover:text-black cursor-pointer"
           >
             ✖
           </button>
 
           {/* Profile content */}
-          <h2 className="text-xl font-bold text-black mb-4">Add Contact</h2>
+          <h2 className="text-xl font-bold text-base-content mb-4">
+            Add Contact
+          </h2>
 
           <form
             onSubmit={addContact}
-            className="flex flex-col gap-4 items-center"
+            className="flex flex-col gap-4 items-center text-base-content"
           >
             {/* Name */}
             <input
@@ -92,7 +101,7 @@ export default function Add() {
               placeholder="Name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="border text-black placeholder-black px-4 py-2 rounded w-64"
+              className="border placeholder-base-content px-4 py-2 rounded w-64"
             />
 
             {/* Email */}
@@ -101,7 +110,7 @@ export default function Add() {
               placeholder="Email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="border text-black placeholder-black px-4 py-2 rounded w-64"
+              className="border placeholder-base-content px-4 py-2 rounded w-64"
             />
 
             {/* Password */}
@@ -110,16 +119,15 @@ export default function Add() {
               placeholder="Phone Number"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
-              className="border text-black placeholder-black px-4 py-2 rounded w-64"
+              className="border placeholder-base-content px-4 py-2 rounded w-64"
             />
 
             <textarea
               placeholder="Notes (optional)"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              className="border text-black placeholder-black px-4 py-2 rounded w-64 h-24"  
+              className="border placeholder-base-content px-4 py-2 rounded w-64 h-24"
             />
-
 
             {/* Error Message */}
             {error && <p className="text-red-500 text-sm">{error}</p>}
@@ -128,7 +136,7 @@ export default function Add() {
             <button
               type="submit"
               disabled={loading}
-              className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 w-64 disabled:opacity-50"
+              className="px-4 py-2 bg-primary text-primary-content rounded hover:opacity-70 w-64 disabled:opacity-50 cursor-pointer"
             >
               {loading ? "Adding..." : "Add Contact"}
             </button>

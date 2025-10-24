@@ -2,12 +2,12 @@
 import { useState } from "react";
 
 interface ProfilesProps {
-  id?: number;
+  id?: string;
   name: string;
   email: string;
   phone: string;
   notes: string;
-  onOpenPanel: (contact: {id?: number, name: string, email: string, phone: string, notes: string}) => void;
+  onOpenPanel: (contact: {id?: string, name: string, email: string, phone: string, notes: string}) => void;
 }
 
 export default function Profiles({id, name, email, phone, notes, onOpenPanel}: ProfilesProps) {

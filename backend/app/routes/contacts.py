@@ -59,11 +59,11 @@ def create_contact(contact_request: ContactRequest, request: Request, user=Depen
 
 @router.delete("/{contact_id}")
 @limiter.limit(RateLimits.CONTACTS)
-def delete_contact(contact_id: int, request: Request, user=Depends(get_current_user)):
+def delete_contact(contact_id: str, request: Request, user=Depends(get_current_user)):
     try:
         response = supabase_client.table("contacts") \
             .delete() \
-            .eq("contact_user_id", contact_id) \
+            .eq("id", contact_id) \
             .eq("user_id", user.id) \
             .execute()
 
@@ -77,7 +77,7 @@ def delete_contact(contact_id: int, request: Request, user=Depends(get_current_u
 
 @router.patch("/{contact_id}")
 @limiter.limit(RateLimits.CONTACTS)
-def edit_contact(contact_id: int, edit_request: editContactRequest, request: Request, user=Depends(get_current_user)):
+def edit_contact(contact_id: str, edit_request: editContactRequest, request: Request, user=Depends(get_current_user)):
     try:
         # Create update dictionary with only non-None values
         update_data = {

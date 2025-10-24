@@ -10,7 +10,7 @@ import { useRouter } from "next/navigation";
 export default function Dashboard() {
   const router = useRouter();
   interface Contact {
-    id?: number;
+    id?: string;
     name: string;
     email: string;
     phone: string;

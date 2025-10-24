@@ -64,7 +64,6 @@ export default function Sidebar() {
             Logout
           </button>
           <p className="px-4 py-10 text-left text-white">{username}</p>
-          <p className="px-4 py-10 text-left text-white">{uuid}</p>
 
         </div>
       </div>

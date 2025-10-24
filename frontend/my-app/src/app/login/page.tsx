@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import ResendVerification from "../components/ResendVerification";
+import ChangeTheme from "../components/ChangeTheme";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -63,6 +64,8 @@ export default function LoginPage() {
 
   return (
     <main className="flex flex-col items-center bg-base-100 justify-center min-h-screen gap-6">
+      <ChangeTheme />
+      
       <h1 className="text-2xl font-bold text-base-content">Login</h1>
 
       {/* Verification Success Message */}

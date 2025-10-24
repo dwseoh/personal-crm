@@ -2,6 +2,7 @@
 import Profiles from "../components/Profiles";
 import Sidebar from "../components/Sidebar";
 import Add from "../components/Add";
+import ChangeTheme from "../components/ChangeTheme";
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -65,6 +66,7 @@ export default function Dashboard() {
 
   return (
     <main className="relative min-h-screen p-8 bg-base-100">
+      <ChangeTheme />
       <h1 className="absolute left-1/2 -translate-x-1/2 text-2xl font-bold text-base-content">
         Welcome
       </h1>

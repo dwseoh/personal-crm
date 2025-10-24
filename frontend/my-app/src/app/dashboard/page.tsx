@@ -249,9 +249,9 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen bg-base-100">
       {/* Header section - Fixed width, doesn't shrink */}
-      <div className="bg-base-200 border-b border-base-300 px-8 py-6">
+      <div className="bg-base-200 border-b border-base-300 px-8 py-12">
         <div className="max-w-7xl mx-auto flex justify-between items-center">
-          <div>
+          <div className="absolute left-20 top-2">
             <h1 className="text-3xl font-bold text-base-content">Welcome</h1>
             <p className="text-base-content opacity-70 mt-1">Dashboard</p>
           </div>
@@ -260,7 +260,7 @@ export default function Dashboard() {
           <button
             onClick={refreshContacts}
             disabled={isRefreshing}
-            className="flex items-center space-x-2 px-4 py-2 bg-primary text-primary-content rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50"
+            className="absolute right-20 top-4 flex items-center space-x-2  px-4 py-3 h-12 bg-primary text-primary-content rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50"
           >
             <svg
               className={`w-4 h-4 ${isRefreshing ? "animate-spin" : ""}`}
@@ -310,7 +310,7 @@ export default function Dashboard() {
           {/* Contacts grid */}
           {contacts.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
-              {contacts.map((contact, index) => (
+              {contacts.slice().reverse().map((contact, index) => (
                 <Profiles
                   key={
                     contact.id || `${contact.name}-${contact.email}-${index}`

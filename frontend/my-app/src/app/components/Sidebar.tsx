@@ -27,14 +27,14 @@ export default function Sidebar() {
       {/* Toggle button (fixed top-left corner) */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="fixed top-4 left-4 z-50 p-3 bg-base-200 hover:bg-base-300 text-base-content rounded-lg border border-base-300 transition-colors duration-200"
+        className="fixed top-4 left-4 z-40 p-3 h-12 w-12 bg-base-200 hover:bg-base-300 text-base-content rounded-lg border border-base-300 transition-colors duration-200"
       >
         {isOpen ? "✖" : "☰"}
       </button>
 
       {/* Sidebar overlay */}
       <div
-        className={`fixed top-0 left-0 h-full bg-base-200 border-r border-base-300 text-base-content transition-all duration-300 z-40 shadow-lg ${
+        className={`fixed top-0 left-0 h-full bg-base-200 border-r border-base-300 text-base-content transition-all duration-300 z-30 shadow-lg ${
           isOpen ? "w-64" : "w-0"
         } overflow-hidden`}
       >
@@ -46,13 +46,19 @@ export default function Sidebar() {
           </div>
 
           {/* Navigation buttons */}
-          <button className="px-4 py-3 text-left hover:bg-base-300 rounded-lg transition-colors duration-200 text-base-content">
+          <button 
+          onClick ={() => router.push("/dashboard")}  
+          className="px-4 py-3 text-left hover:bg-base-300 rounded-lg transition-colors duration-200 text-base-content">
             Dashboard
           </button>
-          <button className="px-4 py-3 text-left hover:bg-base-300 rounded-lg transition-colors duration-200 text-base-content">
+          <button 
+          onClick ={() => router.push("/profile")}
+          className="px-4 py-3 text-left hover:bg-base-300 rounded-lg transition-colors duration-200 text-base-content">
             Profile
           </button>
-          <button className="px-4 py-3 text-left hover:bg-base-300 rounded-lg transition-colors duration-200 text-base-content">
+          <button 
+          onClick ={() => router.push("/settings")}
+          className="px-4 py-3 text-left hover:bg-base-300 rounded-lg transition-colors duration-200 text-base-content">
             Settings
           </button>
           

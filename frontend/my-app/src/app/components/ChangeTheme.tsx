@@ -6,10 +6,10 @@ import { useTheme } from "next-themes";
 export default function ChangeTheme() {
   const { theme, setTheme } = useTheme();
   return (
-    <div className="absolute top-4 right-4 sm:top-8 sm:right-8 z-10">
+    <div className="fixed top-4 right-4 z-10">
         <button
           onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-          className="p-3 rounded-lg cursor-pointer bg-base-200 hover:bg-base-300 text-base-content transition-all duration-200 border border-base-300"
+          className="px-3 py-3 h-12 rounded-lg cursor-pointer bg-base-200 hover:bg-base-300 text-base-content transition-all duration-200 border border-base-300"
           aria-label="Toggle theme"
         >
           {theme === "dark" ? (

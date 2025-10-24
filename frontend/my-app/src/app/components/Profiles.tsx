@@ -2,46 +2,35 @@
 import { useState } from "react";
 
 interface ProfilesProps {
+  id?: string;
   name: string;
   email: string;
   phone: string;
   notes: string;
+  onOpenPanel: (contact: {id?: string, name: string, email: string, phone: string, notes: string}) => void;
 }
 
-export default function Profiles({name, email, phone, notes}: ProfilesProps) {
-  const [isOpen, setIsOpen] = useState(false);
+export default function Profiles({id, name, email, phone, notes, onOpenPanel}: ProfilesProps) {
 
   return (
     <>
-      {/* Button to open popup */}
+      {/* Contact card */}
       <button
-        onClick={() => setIsOpen(true)}
-        className="px-4 py-2 h-55 bg-blue-500 text-white rounded-2xl hover:bg-blue-600"
+        onClick={() => onOpenPanel({id, name, email, phone, notes})}
+        className="w-full p-4 bg-base-200 border border-base-300 text-base-content rounded-lg hover:bg-base-300 hover:border-primary transition-all duration-200 text-left group"
       >
-        {name}
-      </button>
-
-      {/* Popup overlay */}
-      {isOpen && (
-        <div className="fixed inset-0 bg-opacity-50 flex items-center justify-center z-45">
-          <div className="bg-white p-6 w-300 h-150 rounded-xl shadow-lg relative w-80">
-            {/* Close button */}
-            <button
-              onClick={() => setIsOpen(false)}
-              className="absolute top-2 right-2 text-gray-500 hover:text-black"
-            >
-              ✖
-            </button>
-
-            {/* Profile content */}
-            <h2 className="text-xl font-bold text-black mb-4">Profile</h2>
-            <p className="text-black">{name}</p>
-            <p className="text-black">{email}</p>
-            <p className="text-black">{phone}</p>
-            <p className="text-black">{notes}</p>
+        <div className="flex items-center space-x-3">
+          <div className="w-10 h-10 bg-primary text-primary-content rounded-full flex items-center justify-center font-semibold">
+            {name.charAt(0).toUpperCase()}
+          </div>
+          <div className="flex-1 min-w-0">
+            <h3 className="font-semibold text-base-content truncate group-hover:text-primary transition-colors">
+              {name}
+            </h3>
+            <p className="text-sm text-base-content opacity-70 truncate">{email}</p>
           </div>
         </div>
-      )}
+      </button>
     </>
   );
 }

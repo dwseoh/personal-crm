@@ -64,11 +64,11 @@ export default function Dashboard() {
   }
 
   return (
-    <main className="relative min-h-screen p-8 bg-slate-900">
-      <h1 className="absolute left-1/2 -translate-x-1/2 text-2xl font-bold">
+    <main className="relative min-h-screen p-8 bg-base-100">
+      <h1 className="absolute left-1/2 -translate-x-1/2 text-2xl font-bold text-base-content">
         Welcome
       </h1>
-      <p className="absolute left-1/2 -translate-x-1/2 translate-y-10">
+      <p className="absolute left-1/2 -translate-x-1/2 translate-y-10 text-base-content">
         DASHBOARD
       </p>
 

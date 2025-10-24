@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import ResendVerification from "../components/ResendVerification";
 
-
 export default function LoginPage() {
   const router = useRouter();
   const [username, setUsername] = useState("");
@@ -12,7 +11,7 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [verificationSuccess, setVerificationSuccess] = useState(false);
-  
+
   const searchParams = useSearchParams();
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -22,8 +21,8 @@ export default function LoginPage() {
     }
 
     // Check if user came from email verification
-    const verified = searchParams.get('verified');
-    if (verified === 'true') {
+    const verified = searchParams.get("verified");
+    if (verified === "true") {
       setVerificationSuccess(true);
       // Clear the URL parameter after showing the message
       setTimeout(() => setVerificationSuccess(false), 5000);
@@ -46,7 +45,7 @@ export default function LoginPage() {
         },
         body: JSON.stringify({ email: username, password }),
       });
-      
+
       if (!res.ok) {
         const errorData = await res.json();
         //router.push("/dashboard"); // **REMOVE THIS LATER**
@@ -63,19 +62,31 @@ export default function LoginPage() {
   };
 
   return (
-    <main className="flex flex-col items-center bg-slate-900 justify-center min-h-screen gap-6">
-      <h1 className="text-2xl font-bold text-white">Login</h1>
+    <main className="flex flex-col items-center bg-base-100 justify-center min-h-screen gap-6">
+      <h1 className="text-2xl font-bold text-base-content">Login</h1>
 
       {/* Verification Success Message */}
       {verificationSuccess && (
-        <div className="bg-green-100 border-2 border-green-400 text-green-800 px-6 py-4 rounded-lg w-80 text-center shadow-lg">
+        <div className="bg-success text-success-content px-6 py-4 rounded-lg w-80 text-center shadow-lg border border-success">
           <div className="flex items-center justify-center mb-2">
-            <svg className="h-6 w-6 text-green-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
+            <svg
+              className="h-6 w-6 mr-2"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M5 13l4 4L19 7"
+              ></path>
             </svg>
             <p className="font-bold">Email Verified Successfully!</p>
           </div>
-          <p className="text-sm text-green-700">Your account is now active. Please log in below.</p>
+          <p className="text-sm opacity-90">
+            Your account is now active. Please log in below.
+          </p>
         </div>
       )}
 
@@ -86,7 +97,7 @@ export default function LoginPage() {
           placeholder="Username"
           value={username}
           onChange={(e) => setUsername(e.target.value)}
-          className="border px-4 py-2 rounded w-64"
+          className="border border-base-300 bg-base-200 text-base-content px-4 py-2 rounded w-64 focus:outline-none focus:ring-2 focus:ring-primary"
         />
 
         {/* Password */}
@@ -96,25 +107,25 @@ export default function LoginPage() {
             placeholder="Password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="border px-4 py-2 rounded w-full"
+            className="border border-base-300 bg-base-200 text-base-content px-4 py-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-primary"
           />
           {/* Show/Hide toggle */}
           <button
             type="button"
             onClick={() => setShowPassword(!showPassword)}
-            className="absolute right-2 top-2 text-sm text-gray-500"
+            className="absolute right-2 top-2 text-sm text-base-content opacity-70 hover:opacity-100"
           >
             {showPassword ? "Hide" : "Show"}
           </button>
         </div>
 
         {/* Error message */}
-        {error && <p className="text-red-500">{error}</p>}
+        {error && <p className="text-error">{error}</p>}
 
         {/* Login button */}
         <button
           type="submit"
-          className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 w-64"
+          className="px-4 py-2 bg-primary text-primary-content rounded hover:opacity-90 transition-opacity w-64"
         >
           Login
         </button>
@@ -126,7 +137,7 @@ export default function LoginPage() {
       {/* Back button */}
       <button
         onClick={() => router.push("/")}
-        className="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400 text-zinc-800 w-64"
+        className="px-4 py-2 bg-base-300 text-base-content rounded hover:bg-base-200 transition-colors w-64"
       >
         ← Back to Home
       </button>

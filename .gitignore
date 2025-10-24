@@ -42,3 +42,4 @@ venv/
 
 backend/app/__pycache__/
 .vscode/
+env/

@@ -30,7 +30,7 @@ export default function Sidebar() {
       {/* Toggle button (fixed top-left corner) */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="fixed top-4 left-4 z-50 p-2 bg-gray-800 text-white rounded"
+        className="fixed top-4 left-4 z-50 p-2 bg-base-100 border-base-300 text-base-content rounded"
       >
         {isOpen ? "✖" : "☰"}
       </button>

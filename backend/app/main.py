@@ -40,6 +40,8 @@ run this --> pip freeze > requirements.txt
 
 uvicorn app.main:app --reload
 
+source /Users/jamieseoh/Documents/Projects/personal-crm/backend/venv/bin/activate
+
 
 '''
 

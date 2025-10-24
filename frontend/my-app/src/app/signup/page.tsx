@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import ChangeTheme from "../components/ChangeTheme";  
 
 export default function SignupPage() {
   const router = useRouter();
@@ -88,6 +89,7 @@ export default function SignupPage() {
 
   return (
     <main className="flex flex-col bg-base-100 items-center justify-center min-h-screen gap-4">
+      <ChangeTheme />
       <h1 className="text-2xl font-bold text-base-content">Signup</h1>
 
       <form onSubmit={handleSignup} className="flex flex-col gap-4 items-center">

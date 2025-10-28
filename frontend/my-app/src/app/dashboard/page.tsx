@@ -273,9 +273,9 @@ export default function Dashboard() {
     <div className="min-h-screen bg-base-100">
       <Sidebar />
 
-      <div className="bg-base-200 border-b border-base-300 px-8 py-6">
+      <div className="bg-base-200 border-b border-base-300 px-8 py-13">
         <div className="max-w-7xl mx-auto flex justify-between items-center">
-          <div className="absolute left-20 top-2">
+          <div className="absolute left-20 top-5">
             <h1 className="text-3xl font-bold text-base-content">Welcome</h1>
             <p className="text-base-content opacity-70 mt-1">Dashboard</p>
           </div>
@@ -284,7 +284,7 @@ export default function Dashboard() {
           <button
             onClick={refreshContacts}
             disabled={isRefreshing}
-            className="absolute right-20 top-4 flex items-center space-x-2  px-4 py-3 h-12 bg-primary text-primary-content rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50"
+            className="absolute right-20 top-7 flex items-center space-x-2  px-4 py-3 h-12 bg-primary text-primary-content rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50"
           >
             <svg
               className={`w-4 h-4 ${isRefreshing ? "animate-spin" : ""}`}

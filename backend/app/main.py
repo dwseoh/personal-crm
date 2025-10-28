@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware  # Add this import
 from app.auth import router as auth_router
 from app.routes.contacts import router as contacts_router
 from app.routes.user import router as user_router
+from app.routes.groups import router as groups_router
 
 #app.db
 # .database
@@ -22,6 +23,7 @@ app.add_middleware(
 # Routers - remove the prefix since it's already defined in auth.py
 app.include_router(auth_router)
 app.include_router(user_router)
+app.include_router(groups_router)
 app.include_router(contacts_router)
 
 

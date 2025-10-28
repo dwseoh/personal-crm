@@ -1,10 +1,11 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 
 export default function Sidebar() {
   const [isOpen, setIsOpen] = useState(false);
   const router = useRouter();
+  const sidebarRef = useRef<HTMLDivElement>(null);
   const handleLogout = () => {
     // Remove token
     localStorage.removeItem("token");
@@ -20,13 +21,34 @@ export default function Sidebar() {
     // Try to get username from localStorage
     const storedUsername = localStorage.getItem("username");
     if (storedUsername) setUsername(storedUsername);
+
+    
   }, []);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (
+        sidebarRef.current &&
+    !sidebarRef.current.contains(event.target as Node) &&
+    !(event.target as HTMLElement).closest("#sidebar-toggle")
+      ) {
+        setIsOpen(false);
+      }
+    }
+    
+
+    document.addEventListener("mouseup", handleClickOutside);
+    return () => {
+      document.removeEventListener("mouseup", handleClickOutside);
+    };
+  }, [sidebarRef]);
 
   return (
     <>
       {/* Toggle button (fixed top-left corner) */}
       <button
-        onClick={() => setIsOpen(!isOpen)}
+        id="sidebar-toggle"
+        onClick={() => setIsOpen(!isOpen)} 
         className="fixed top-7 left-4 z-40 p-3 h-12 w-12 bg-base-200 hover:bg-base-300 text-base-content rounded-lg border border-base-300 transition-colors duration-200"
       >
         {isOpen ? "✖" : "☰"}
@@ -34,11 +56,12 @@ export default function Sidebar() {
 
       {/* Sidebar overlay */}
       <div
+        ref={sidebarRef}
         className={`fixed top-0 left-0 h-full bg-base-200 border-r border-base-300 text-base-content transition-all duration-300 z-30 shadow-lg ${
           isOpen ? "w-64" : "w-0"
         } overflow-hidden`}
       >
-        <div className="mt-16 flex flex-col space-y-1 p-4">
+        <div className="mt-20 flex flex-col space-y-1x p-4">
           {/* User info section */}
           <div className="mb-4 p-3 bg-base-300 rounded-lg border border-base-300">
             <p className="text-sm text-base-content opacity-70">Logged in as:</p>

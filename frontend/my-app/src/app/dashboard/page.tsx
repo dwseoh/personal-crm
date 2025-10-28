@@ -4,11 +4,10 @@ import Sidebar from "../components/Sidebar";
 import Add from "../components/Add";
 import ChangeTheme from "../components/ChangeTheme";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 
 export default function Dashboard() {
-  const router = useRouter();
   interface Contact {
     id?: string;
     name: string;
@@ -16,7 +15,7 @@ export default function Dashboard() {
     phone: string;
     notes: string;
   }
-
+  const router = useRouter();
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -32,22 +31,43 @@ export default function Dashboard() {
   });
   const [isUpdating, setIsUpdating] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const editingRef = useRef<HTMLDivElement>(null);
 
   // Keyboard shortcut for search (Cmd+K / Ctrl+K)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
         e.preventDefault();
-        const searchInput = document.querySelector('input[placeholder="Search contacts..."]') as HTMLInputElement;
+        const searchInput = document.querySelector(
+          'input[placeholder="Search contacts..."]'
+        ) as HTMLInputElement;
         if (searchInput) {
           searchInput.focus();
         }
       }
     };
 
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+    };
   }, []);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (
+        editingRef.current &&
+        !editingRef.current.contains(event.target as Node)
+      ) {
+        setIsPanelOpen(false);
+      }
+    }
+    document.addEventListener("mouseup", handleClickOutside);
+    return () => {
+      document.removeEventListener("mouseup", handleClickOutside);
+    };
+  }, [editingRef]);
 
   const handleOpenPanel = (contact: Contact) => {
     setSelectedContact(contact);
@@ -225,11 +245,13 @@ export default function Dashboard() {
   };
 
   // Filter contacts based on search query
-  const filteredContacts = contacts.filter(contact =>
-    contact.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    contact.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    contact.phone.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (contact.notes && contact.notes.toLowerCase().includes(searchQuery.toLowerCase()))
+  const filteredContacts = contacts.filter(
+    (contact) =>
+      contact.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      contact.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      contact.phone.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (contact.notes &&
+        contact.notes.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
   // Show loading skeleton only on initial load with no cached data
@@ -275,7 +297,7 @@ export default function Dashboard() {
 
       <div className="bg-base-200 border-b border-base-300 px-8 py-13">
         <div className="max-w-7xl mx-auto flex justify-between items-center">
-          <div className="absolute left-20 top-5">
+          <div className="absolute left-21 top-5">
             <h1 className="text-3xl font-bold text-base-content">Welcome</h1>
             <p className="text-base-content opacity-70 mt-1">Dashboard</p>
           </div>
@@ -311,7 +333,6 @@ export default function Dashboard() {
         }`}
       >
         <div className="max-w-7xl mx-auto px-8 py-8">
-          
           {/* Search Bar */}
           <div className="mb-6">
             <div className="relative max-w-md search-bar">
@@ -346,14 +367,14 @@ export default function Dashboard() {
             </div>
           </div>
 
-
           {/* Search Results Info */}
           {searchQuery && (
             <div className="mb-4 text-sm text-base-content opacity-70">
-              {filteredContacts.length === 0 
+              {filteredContacts.length === 0
                 ? `No contacts found for "${searchQuery}"`
-                : `Found ${filteredContacts.length} contact${filteredContacts.length === 1 ? '' : 's'} for "${searchQuery}"`
-              }
+                : `Found ${filteredContacts.length} contact${
+                    filteredContacts.length === 1 ? "" : "s"
+                  } for "${searchQuery}"`}
             </div>
           )}
 
@@ -456,7 +477,7 @@ export default function Dashboard() {
                 </div>
 
                 {/* Edit/Save buttons */}
-                <div className="flex space-x-2">
+                <div ref={editingRef} className="flex space-x-2">
                   {!isEditing ? (
                     <button
                       onClick={handleEditToggle}

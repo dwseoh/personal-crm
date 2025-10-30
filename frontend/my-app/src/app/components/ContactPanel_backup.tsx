@@ -615,36 +615,37 @@ export default function ContactPanel({
             </div>
           </div>
         </div>
-      </div>
 
-      </div>
-
-      {/* Delete Modal - Now outside the positioned panel */}
-      {showDeleteModal && (
-        <div className="fixed inset-0 bg-base-100 bg-opacity-50 z-[60] flex items-center justify-center p-4">
-          <div className="bg-base-100 border border-base-300 p-6 rounded-xl shadow-2xl relative w-96 max-w-full">
-            <h3 className="text-lg font-bold mb-4">Delete Contact</h3>
-            <p className="mb-6">
-              Are you sure you want to delete {selectedContact?.name}? This action cannot be undone.
-            </p>
-            <div className="flex justify-end space-x-3">
-              <button
-                onClick={() => setShowDeleteModal(false)}
-                className="px-4 py-2 bg-base-300 rounded-lg hover:bg-base-200"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleDeleteContact}
-                disabled={isDeleting}
-                className="px-4 py-2 bg-error text-error-content rounded-lg hover:opacity-90 disabled:opacity-50"
-              >
-                {isDeleting ? "Deleting..." : "Delete"}
-              </button>
+        {showDeleteModal && (
+          <div className="fixed inset-0 bg-base-100 bg-opacity-50 z-50 flex items-center justify-center">
+            <div className="bg-base-100 border border-base-300 p-6 rounded-xl shadow-xl relative w-96 max-w-[90vw]">
+              <h3 className="text-lg font-bold mb-4">Delete Contact</h3>
+              <p className="mb-6">
+                Are you sure you want to delete {selectedContact?.name}? This action cannot be undone.
+              </p>
+              <div className="flex justify-end space-x-3">
+                <button
+                  onClick={() => setShowDeleteModal(false)}
+                  className="px-4 py-2 bg-base-300 rounded-lg hover:bg-base-200"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleDeleteContact}
+                  disabled={isDeleting}
+                  className="px-4 py-2 bg-error text-error-content rounded-lg hover:opacity-90 disabled:opacity-50"
+                >
+                  {isDeleting ? "Deleting..." : "Delete"}
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
+
+
+      </div>
+
+      </div>
 
       {/* Group Creator Popup - Now outside the positioned panel */}
       <GroupCreator

@@ -363,6 +363,7 @@ export default function Dashboard() {
         isPanelOpen={isPanelOpen}
         onClosePanel={handleClosePanel}
         onContactUpdate={handleContactUpdate}
+        onContactDeleted={refreshContacts}
       />
 
       {/* Fixed components */}

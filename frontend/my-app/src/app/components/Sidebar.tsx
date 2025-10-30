@@ -16,26 +16,23 @@ export default function Sidebar() {
     router.push("/login");
   };
   const [username, setUsername] = useState<string | null>(null);
-  
+
   useEffect(() => {
     // Try to get username from localStorage
     const storedUsername = localStorage.getItem("username");
     if (storedUsername) setUsername(storedUsername);
-
-    
   }, []);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (
         sidebarRef.current &&
-    !sidebarRef.current.contains(event.target as Node) &&
-    !(event.target as HTMLElement).closest("#sidebar-toggle")
+        !sidebarRef.current.contains(event.target as Node) &&
+        !(event.target as HTMLElement).closest("#sidebar-toggle")
       ) {
         setIsOpen(false);
       }
     }
-    
 
     document.addEventListener("mouseup", handleClickOutside);
     return () => {
@@ -48,7 +45,7 @@ export default function Sidebar() {
       {/* Toggle button (fixed top-left corner) */}
       <button
         id="sidebar-toggle"
-        onClick={() => setIsOpen(!isOpen)} 
+        onClick={() => setIsOpen(!isOpen)}
         className="fixed top-7 left-4 z-40 p-3 h-12 w-12 bg-base-200 hover:bg-base-300 text-base-content rounded-lg border border-base-300 transition-colors duration-200"
       >
         {isOpen ? "✖" : "☰"}
@@ -64,30 +61,37 @@ export default function Sidebar() {
         <div className="mt-20 flex flex-col space-y-1x p-4">
           {/* User info section */}
           <div className="mb-4 p-3 bg-base-300 rounded-lg border border-base-300">
-            <p className="text-sm text-base-content opacity-70">Logged in as:</p>
-            <p className="font-semibold text-base-content">{username || 'User'}</p>
+            <p className="text-sm text-base-content opacity-70">
+              Logged in as:
+            </p>
+            <p className="font-semibold text-base-content">
+              {username || "User"}
+            </p>
           </div>
 
           {/* Navigation buttons */}
-          <button 
-          onClick ={() => router.push("/dashboard")}  
-          className="px-4 py-3 text-left hover:bg-base-300 rounded-lg transition-colors duration-200 text-base-content">
+          <button
+            onClick={() => router.push("/dashboard")}
+            className="px-4 py-3 text-left hover:bg-base-300 rounded-lg transition-colors duration-200 text-base-content"
+          >
             Dashboard
           </button>
-          <button 
-          onClick ={() => router.push("/profile")}
-          className="px-4 py-3 text-left hover:bg-base-300 rounded-lg transition-colors duration-200 text-base-content">
+          <button
+            onClick={() => router.push("/profile")}
+            className="px-4 py-3 text-left hover:bg-base-300 rounded-lg transition-colors duration-200 text-base-content"
+          >
             Profile
           </button>
-          <button 
-          onClick ={() => router.push("/settings")}
-          className="px-4 py-3 text-left hover:bg-base-300 rounded-lg transition-colors duration-200 text-base-content">
+          <button
+            onClick={() => router.push("/settings")}
+            className="px-4 py-3 text-left hover:bg-base-300 rounded-lg transition-colors duration-200 text-base-content"
+          >
             Settings
           </button>
-          
+
           {/* Divider */}
           <div className="border-t border-base-300 my-2"></div>
-          
+
           <button
             onClick={() => router.push("/")}
             className="px-4 py-3 text-left hover:bg-base-300 rounded-lg transition-colors duration-200 text-base-content"

@@ -16,6 +16,7 @@ export default function Dashboard() {
     notes: string;
   }
   const router = useRouter();
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -30,6 +31,7 @@ export default function Dashboard() {
     notes: "",
   });
   const [isUpdating, setIsUpdating] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const editingRef = useRef<HTMLDivElement>(null);
 
@@ -54,6 +56,7 @@ export default function Dashboard() {
     };
   }, []);
 
+  /*
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (
@@ -68,6 +71,7 @@ export default function Dashboard() {
       document.removeEventListener("mouseup", handleClickOutside);
     };
   }, [editingRef]);
+  */
 
   const handleOpenPanel = (contact: Contact) => {
     setSelectedContact(contact);
@@ -88,6 +92,50 @@ export default function Dashboard() {
       setEditForm(selectedContact);
     }
   };
+
+  const handleDeleteContact = async () => {
+  setShowDeleteModal(false); // Close modal first
+  if (!selectedContact?.id) return;
+
+  const token = localStorage.getItem("token");
+  setIsDeleting(true);
+  
+  try {
+    const res = await fetch(
+      `http://127.0.0.1:8000/contacts/${selectedContact.id}`,
+      {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+    
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      if (errData.detail?.includes("expired")) {
+        localStorage.removeItem("token");
+        localStorage.removeItem("cached_contacts");
+        router.push("/login");
+        return;
+      }
+      throw new Error(errData.detail || "Failed to delete contact");
+    }
+
+    const updated = contacts.filter((c) => c.id !== selectedContact.id);
+    setContacts(updated);
+    localStorage.setItem("cached_contacts", JSON.stringify(updated));
+    
+    setIsPanelOpen(false);
+    setIsEditing(false);
+    setTimeout(() => setSelectedContact(null), 300);
+  } catch (err) {
+    console.error("Delete failed:", err);
+    alert("Failed to delete contact. Please try again.");
+  } finally {
+    setIsDeleting(false);
+  }
+};
 
   const handleUpdateContact = async () => {
     if (!selectedContact || !selectedContact.id) return;
@@ -479,6 +527,7 @@ export default function Dashboard() {
                 {/* Edit/Save buttons */}
                 <div ref={editingRef} className="flex space-x-2">
                   {!isEditing ? (
+                  <>
                     <button
                       onClick={handleEditToggle}
                       className="px-3 py-2 bg-accent text-accent-content rounded-lg hover:opacity-90 transition-opacity flex items-center space-x-2"
@@ -498,11 +547,33 @@ export default function Dashboard() {
                       </svg>
                       <span>Edit</span>
                     </button>
+                    <button
+                      onClick={() => setShowDeleteModal(true)}
+                      disabled={isDeleting}
+                      className="px-3 py-2 bg-error text-error-content rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center space-x-2"
+                      >
+                      <svg
+                        className="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth="2"
+                          d="M19 7L5 7M10 11v6M14 11v6M6 7l1 12a2 2 0 002 2h6a2 2 0 002-2l1-12"
+                        />
+                      </svg>
+                      <span>{isDeleting ? "Deleting..." : "Delete"}</span>
+                      
+                      </button>
+                  </>
                   ) : (
                     <>
                       <button
                         onClick={handleUpdateContact}
-                        disabled={isUpdating}
+                        disabled={isUpdating || isDeleting}
                         className="px-3 py-2 bg-success text-success-content rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center space-x-2"
                       >
                         <svg
@@ -522,7 +593,7 @@ export default function Dashboard() {
                       </button>
                       <button
                         onClick={handleEditToggle}
-                        disabled={isUpdating}
+                        disabled={isUpdating || isDeleting}
                         className="px-3 py-2 bg-base-300 text-base-content rounded-lg hover:bg-base-200 transition-colors disabled:opacity-50"
                       >
                         Cancel
@@ -531,7 +602,7 @@ export default function Dashboard() {
                   )}
                 </div>
               </div>
-
+            
               <div className="space-y-6">
                 {/* Name Field */}
                 <div>
@@ -635,9 +706,35 @@ export default function Dashboard() {
       </div>
 
       {/* Fixed components */}
+      {showDeleteModal && (
+  <div className="fixed inset-0 bg-base-100 bg-opacity-50 z-50 flex items-center justify-center">
+    <div className="bg-base-100 border border-base-300 p-6 rounded-xl shadow-xl relative w-96 max-w-[90vw]">
+      <h3 className="text-lg font-bold mb-4">Delete Contact</h3>
+      <p className="mb-6">
+        Are you sure you want to delete {selectedContact?.name}? This action cannot be undone.
+      </p>
+      <div className="flex justify-end space-x-3">
+        <button
+          onClick={() => setShowDeleteModal(false)}
+          className="px-4 py-2 bg-base-300 rounded-lg hover:bg-base-200"
+        >
+          Cancel
+        </button>
+        <button
+          onClick={handleDeleteContact}
+          disabled={isDeleting}
+          className="px-4 py-2 bg-error text-error-content rounded-lg hover:opacity-90 disabled:opacity-50"
+        >
+          {isDeleting ? "Deleting..." : "Delete"}
+        </button>
+      </div>
+    </div>
+  </div>
+)}
       <Add />
       <Sidebar />
       <ChangeTheme />
+      
     </div>
   );
 }

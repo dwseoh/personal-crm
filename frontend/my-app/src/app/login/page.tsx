@@ -16,10 +16,23 @@ export default function LoginPage() {
   const searchParams = useSearchParams();
   useEffect(() => {
     const token = localStorage.getItem("token");
-    if (token) {
-      // User is already logged in → redirect to dashboard
-      router.push("/dashboard");
+  if (!token) return;
+
+  try {
+    const payload = JSON.parse(atob(token.split(".")[1])); // Decode middle part of JWT
+    const isExpired = payload.exp * 1000 < Date.now(); // exp is in seconds → convert to ms
+
+    if (isExpired) {
+      localStorage.removeItem("token");
+      return; // Don’t redirect, token is invalid
     }
+
+    // Token is valid → redirect
+    router.push("/dashboard");
+  } catch (err) {
+    console.error("Invalid token", err);
+    localStorage.removeItem("token");
+  }
 
     // Check if user came from email verification
     const verified = searchParams.get("verified");

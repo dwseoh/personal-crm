@@ -67,3 +67,6 @@ class RateLimits:
     # Contact management
     CONTACTS = "100/minute"
     USERS="10/minute"
+    
+    # Group management
+    GROUPS = "50/minute"

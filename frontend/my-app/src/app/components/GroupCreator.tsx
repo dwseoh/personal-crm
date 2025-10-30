@@ -59,6 +59,7 @@ export default function GroupCreator({
         },
         body: JSON.stringify({
           name: groupName.trim(),
+          description: groupDescription,
           color: selectedColor,
         }),
       });

@@ -351,17 +351,20 @@ export default function Contacts() {
       
 
       {/* Top Bar with Flexbox Layout */}
-      <div className="bg-base-200 border-b border-base-300 px-8 py-4">
+      <div className="bg-base-200 border-b border-base-300 py-6">
 
-        <div className="max-w-7xl mx-auto flex items-center justify-between gap-8">
+        <div className="max-w-7xl mx-auto flex items-center space-between">
+
+          <div className="w-12"></div>
+
           {/* Left side - Title */}
-          <div className="flex-shrink-0">
+          <div className="flex-shrink-0 ">
             <h1 className="text-3xl font-bold text-base-content">All Contacts</h1>
             <p className="text-base-content opacity-70 mt-1">Browse and manage your contacts</p>
           </div>
 
           {/* Center - Search Bar */}
-          <div className="flex-1 max-w-md">
+          <div className="flex-1 max-w-md pl-12 pr-12">
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                 <svg
@@ -417,6 +420,9 @@ export default function Contacts() {
               <span>{isRefreshing ? "Refreshing..." : "Refresh"}</span>
             </button>
           </div>
+
+          <div className="w-12"></div>
+
         </div>
       </div>
 
@@ -564,13 +570,12 @@ export default function Contacts() {
       <Add />
       
       {/* Temporary boxes to prevent overlap when zooming */}
-      <div className="fixed bottom-4 left-4 w-64 bg-base-200 border border-base-300 rounded-lg p-2 shadow-lg z-30">
-        <Sidebar />
-      </div>
       
-      <div className="fixed bottom-4 left-72 w-64 bg-base-200 border border-base-300 rounded-lg p-2 shadow-lg z-30">
+        <Sidebar />
+
+      
         <ChangeTheme />
-      </div>
+
       
     </div>
   );

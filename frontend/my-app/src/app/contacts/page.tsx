@@ -25,6 +25,11 @@ export default function Contacts() {
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
   const [isPanelOpen, setIsPanelOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [sortBy, setSortBy] = useState("name"); // name, newest, oldest
+  const [filterByGroup, setFilterByGroup] = useState("all");
+  const [availableGroups, setAvailableGroups] = useState<any[]>([]);
+  const [contactGroups, setContactGroups] = useState<{[contactId: string]: string[]}>({});
+  const [loadingGroups, setLoadingGroups] = useState(false);
   const editingRef = useRef<HTMLDivElement>(null);
 
   // Keyboard shortcut for search (Cmd+K / Ctrl+K)
@@ -97,6 +102,7 @@ export default function Contacts() {
         const parsed = JSON.parse(cachedContacts);
         if (Array.isArray(parsed) && parsed.length > 0) {
           setContacts(parsed);
+          loadContactGroups(parsed); // Load groups for cached contacts
           setHasInitialLoad(true);
         }
       } catch (error) {
@@ -146,6 +152,9 @@ export default function Contacts() {
 
         setContacts(contactsData);
 
+        // Load groups for each contact
+        await loadContactGroups(contactsData);
+
         // Cache the contacts for next time
         localStorage.setItem("cached_contacts", JSON.stringify(contactsData));
 
@@ -168,6 +177,67 @@ export default function Contacts() {
     fetchContacts();
   }, [router, hasInitialLoad]);
 
+  // Load available groups for filtering
+  useEffect(() => {
+    const loadGroups = async () => {
+      const token = localStorage.getItem("token");
+      if (!token) return;
+
+      try {
+        const res = await fetch("http://127.0.0.1:8000/groups/", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (res.ok) {
+          const groups = await res.json();
+          setAvailableGroups(groups);
+        }
+      } catch (error) {
+        console.error("Failed to load groups:", error);
+      }
+    };
+
+    loadGroups();
+  }, []);
+
+  // Load groups for contacts
+  const loadContactGroups = async (contactsData: Contact[]) => {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+
+    setLoadingGroups(true);
+    const groupsMap: {[contactId: string]: string[]} = {};
+
+    try {
+      // Load groups for each contact
+      await Promise.all(
+        contactsData.map(async (contact) => {
+          if (contact.id) {
+            try {
+              const res = await fetch(`http://127.0.0.1:8000/contacts/${contact.id}/groups`, {
+                headers: { Authorization: `Bearer ${token}` },
+              });
+              if (res.ok) {
+                const groups = await res.json();
+                groupsMap[contact.id] = groups.map((g: any) => g.id);
+              } else {
+                groupsMap[contact.id] = [];
+              }
+            } catch (error) {
+              console.error(`Failed to load groups for contact ${contact.id}:`, error);
+              groupsMap[contact.id] = [];
+            }
+          }
+        })
+      );
+
+      setContactGroups(groupsMap);
+    } catch (error) {
+      console.error("Failed to load contact groups:", error);
+    } finally {
+      setLoadingGroups(false);
+    }
+  };
+
   // Refresh function for manual refresh
   const refreshContacts = () => {
     const token = localStorage.getItem("token");
@@ -188,24 +258,56 @@ export default function Contacts() {
         }
         return res.json();
       })
-      .then((data) => {
+      .then(async (data) => {
         const contactsData = Array.isArray(data) ? data : [];
         setContacts(contactsData);
+        await loadContactGroups(contactsData);
         localStorage.setItem("cached_contacts", JSON.stringify(contactsData));
       })
       .catch((err) => console.error("Refresh failed:", err))
       .finally(() => setIsRefreshing(false));
   };
 
-  // Filter contacts based on search query
-  const filteredContacts = contacts.filter(
-    (contact) =>
-      contact.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      contact.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      contact.phone.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (contact.notes &&
-        contact.notes.toLowerCase().includes(searchQuery.toLowerCase()))
-  );
+  // Filter and sort contacts
+  const filteredAndSortedContacts = (() => {
+    // First filter by search query
+    let filtered = contacts.filter(
+      (contact) =>
+        contact.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        contact.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        contact.phone.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (contact.notes &&
+          contact.notes.toLowerCase().includes(searchQuery.toLowerCase()))
+    );
+
+    // Then filter by group
+    if (filterByGroup !== "all") {
+      filtered = filtered.filter(contact => {
+        if (!contact.id) return false;
+        const groups = contactGroups[contact.id] || [];
+        return groups.includes(filterByGroup);
+      });
+    }
+
+    // Then sort
+    filtered.sort((a, b) => {
+      switch (sortBy) {
+        case "name":
+          return a.name.localeCompare(b.name);
+        case "newest":
+          // Assuming contacts have a created_at field or we use id as proxy
+          return (b.id || "").localeCompare(a.id || "");
+        case "oldest":
+          return (a.id || "").localeCompare(b.id || "");
+        case "email":
+          return a.email.localeCompare(b.email);
+        default:
+          return 0;
+      }
+    });
+
+    return filtered;
+  })();
 
   // Show loading skeleton only on initial load with no cached data
   if (isLoading && !hasInitialLoad && contacts.length === 0) {
@@ -214,8 +316,8 @@ export default function Contacts() {
         {/* Header section */}
         <div className="bg-base-200 border-b border-base-300 px-8 py-6">
           <div className="max-w-7xl mx-auto">
-            <h1 className="text-3xl font-bold text-base-content">Welcome</h1>
-            <p className="text-base-content opacity-70 mt-1">Contacts</p>
+            <h1 className="text-3xl font-bold text-base-content">All Contacts</h1>
+            <p className="text-base-content opacity-70 mt-1">Browse...</p>
           </div>
         </div>
 
@@ -248,11 +350,45 @@ export default function Contacts() {
     <div className="min-h-screen bg-base-100">
       <Sidebar />
 
-      <div className="bg-base-200 border-b border-base-300 px-8 py-13">
+      <div className="bg-base-200 border-b border-base-300 px-8 py-11">
         <div className="max-w-7xl mx-auto flex justify-between items-center">
           <div className="absolute left-21 top-5">
-            <h1 className="text-3xl font-bold text-base-content">Welcome</h1>
-            <p className="text-base-content opacity-70 mt-1">Contacts</p>
+            <h1 className="text-3xl font-bold text-base-content">All Contacts</h1>
+            <p className="text-base-content opacity-70 mt-1">Browse...</p>
+          </div>
+
+          {/* Search Bar */}
+          <div>
+            <div className="absolute left-100 max-w-md search-bar">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <svg
+                  className="h-5 w-5 text-base-content opacity-50"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M21 21l-4.35-4.35m0 0A7.5 7.5 0 1110.5 3a7.5 7.5 0 016.15 13.65z"
+                  />
+                </svg>
+              </div>
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search contacts..."
+                className="w-full pl-10 pr-4 py-3 bg-base-200 border border-base-300 rounded-lg text-base-content placeholder-base-content placeholder-opacity-70 focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all duration-200"
+              />
+              <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
+                <kbd className="hidden sm:inline-flex items-center px-2 py-1 text-xs font-medium text-base-content opacity-50 bg-base-300 border border-base-300 rounded">
+                  ⌘K
+                </kbd>
+              </div>
+            </div>
           </div>
 
           {/* Refresh button */}
@@ -286,55 +422,73 @@ export default function Contacts() {
         }`}
       >
         <div className="max-w-7xl mx-auto px-8 py-8">
-          {/* Search Bar */}
-          <div className="mb-6">
-            <div className="relative max-w-md search-bar">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <svg
-                  className="h-5 w-5 text-base-content opacity-50"
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
+          
+
+          {/* Filter and Sort Controls */}
+          <div className="mb-6 flex flex-wrap gap-4 items-center">
+            {/* Sort Dropdown */}
+            <div className="flex items-center space-x-2">
+              <label className="text-sm font-medium text-base-content">Sort by:</label>
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                className="px-3 py-2 bg-base-200 border border-base-300 rounded-lg text-base-content focus:outline-none focus:ring-2 focus:ring-primary"
+              >
+                <option value="name">Name (A-Z)</option>
+                <option value="newest">Newest First</option>
+                <option value="oldest">Oldest First</option>
+                <option value="email">Email (A-Z)</option>
+              </select>
+            </div>
+
+            {/* Group Filter Dropdown - Only show if groups are available */}
+            {availableGroups.length > 0 && (
+              <div className="flex items-center space-x-2">
+                <label className="text-sm font-medium text-base-content">Filter by group:</label>
+                <select
+                  value={filterByGroup}
+                  onChange={(e) => setFilterByGroup(e.target.value)}
+                  disabled={loadingGroups}
+                  className="px-3 py-2 bg-base-200 border border-base-300 rounded-lg text-base-content focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
                 >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M21 21l-4.35-4.35m0 0A7.5 7.5 0 1110.5 3a7.5 7.5 0 016.15 13.65z"
-                  />
-                </svg>
+                  <option value="all">All Groups</option>
+                  {availableGroups.map((group) => (
+                    <option key={group.id} value={group.id}>
+                      {group.name}
+                    </option>
+                  ))}
+                </select>
+                {loadingGroups && (
+                  <div className="text-xs text-base-content opacity-50">Loading...</div>
+                )}
               </div>
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search contacts..."
-                className="w-full pl-10 pr-4 py-3 bg-base-200 border border-base-300 rounded-lg text-base-content placeholder-base-content placeholder-opacity-70 focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all duration-200"
-              />
-              <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
-                <kbd className="hidden sm:inline-flex items-center px-2 py-1 text-xs font-medium text-base-content opacity-50 bg-base-300 border border-base-300 rounded">
-                  ⌘K
-                </kbd>
-              </div>
+            )}
+
+            {/* Clear Filters Button */}
+            {(searchQuery || sortBy !== "name" || filterByGroup !== "all") && (
+              <button
+                onClick={() => {
+                  setSearchQuery("");
+                  setSortBy("name");
+                  setFilterByGroup("all");
+                }}
+                className="px-3 py-2 bg-base-300 text-base-content rounded-lg hover:bg-base-200 transition-colors text-sm"
+              >
+                Clear Filters
+              </button>
+            )}
+
+            {/* Results Count */}
+            <div className="text-sm text-base-content opacity-70 ml-auto">
+              {filteredAndSortedContacts.length} contact{filteredAndSortedContacts.length === 1 ? "" : "s"}
+              {searchQuery && ` matching "${searchQuery}"`}
             </div>
           </div>
-
-          {/* Search Results Info */}
-          {searchQuery && (
-            <div className="mb-4 text-sm text-base-content opacity-70">
-              {filteredContacts.length === 0
-                ? `No contacts found for "${searchQuery}"`
-                : `Found ${filteredContacts.length} contact${
-                    filteredContacts.length === 1 ? "" : "s"
-                  } for "${searchQuery}"`}
-            </div>
-          )}
 
           {/* Contacts grid */}
           {contacts.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
-              {filteredContacts.map((contact, index) => (
+              {filteredAndSortedContacts.map((contact, index) => (
                 <Profiles
                   key={
                     contact.id || `${contact.name}-${contact.email}-${index}`
@@ -349,16 +503,29 @@ export default function Contacts() {
               ))}
             </div>
           ) : (
-            /* Empty state - only show after initial load is complete */
+            /* Empty state - show different messages based on context */
             hasInitialLoad && (
               <div className="text-center py-12">
                 <div className="bg-base-200 rounded-lg p-8 max-w-md mx-auto">
-                  <h3 className="text-lg font-semibold text-base-content mb-2">
-                    No contacts yet
-                  </h3>
-                  <p className="text-base-content opacity-70 mb-4">
-                    Get started by adding your first contact
-                  </p>
+                  {contacts.length === 0 ? (
+                    <>
+                      <h3 className="text-lg font-semibold text-base-content mb-2">
+                        No contacts yet
+                      </h3>
+                      <p className="text-base-content opacity-70 mb-4">
+                        Get started by adding your first contact
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <h3 className="text-lg font-semibold text-base-content mb-2">
+                        No contacts match your filters
+                      </h3>
+                      <p className="text-base-content opacity-70 mb-4">
+                        Try adjusting your search or filter criteria
+                      </p>
+                    </>
+                  )}
                   <div className="w-16 h-16 bg-base-300 rounded-full mx-auto flex items-center justify-center">
                     <svg
                       className="w-8 h-8 text-base-content opacity-50"

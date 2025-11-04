@@ -348,18 +348,21 @@ export default function Contacts() {
 
   return (
     <div className="min-h-screen bg-base-100">
-      <Sidebar />
+      
 
-      <div className="bg-base-200 border-b border-base-300 px-8 py-11">
-        <div className="max-w-7xl mx-auto flex justify-between items-center">
-          <div className="absolute left-21 top-5">
+      {/* Top Bar with Flexbox Layout */}
+      <div className="bg-base-200 border-b border-base-300 px-8 py-4">
+
+        <div className="max-w-7xl mx-auto flex items-center justify-between gap-8">
+          {/* Left side - Title */}
+          <div className="flex-shrink-0">
             <h1 className="text-3xl font-bold text-base-content">All Contacts</h1>
-            <p className="text-base-content opacity-70 mt-1">Browse...</p>
+            <p className="text-base-content opacity-70 mt-1">Browse and manage your contacts</p>
           </div>
 
-          {/* Search Bar */}
-          <div>
-            <div className="absolute left-100 max-w-md search-bar">
+          {/* Center - Search Bar */}
+          <div className="flex-1 max-w-md">
+            <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                 <svg
                   className="h-5 w-5 text-base-content opacity-50"
@@ -381,7 +384,7 @@ export default function Contacts() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search contacts..."
-                className="w-full pl-10 pr-4 py-3 bg-base-200 border border-base-300 rounded-lg text-base-content placeholder-base-content placeholder-opacity-70 focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all duration-200"
+                className="w-full pl-10 pr-16 py-3 bg-base-100 border border-base-300 rounded-lg text-base-content placeholder-base-content placeholder-opacity-70 focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all duration-200"
               />
               <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
                 <kbd className="hidden sm:inline-flex items-center px-2 py-1 text-xs font-medium text-base-content opacity-50 bg-base-300 border border-base-300 rounded">
@@ -391,11 +394,12 @@ export default function Contacts() {
             </div>
           </div>
 
-          {/* Refresh button */}
-          <button
-            onClick={refreshContacts}
-            disabled={isRefreshing}
-            className="absolute right-20 top-7 flex items-center space-x-2  px-4 py-3 h-12 bg-primary text-primary-content rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50"
+          {/* Right side - Refresh button */}
+          <div className="flex-shrink-0">
+            <button
+              onClick={refreshContacts}
+              disabled={isRefreshing}
+              className="flex items-center space-x-2 px-4 py-3 bg-primary text-primary-content rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50"
           >
             <svg
               className={`w-4 h-4 ${isRefreshing ? "animate-spin" : ""}`}
@@ -410,8 +414,9 @@ export default function Contacts() {
                 d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
               />
             </svg>
-            <span>{isRefreshing ? "Refreshing..." : "Refresh"}</span>
-          </button>
+              <span>{isRefreshing ? "Refreshing..." : "Refresh"}</span>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -557,8 +562,15 @@ export default function Contacts() {
         onContactDeleted={refreshContacts}
       />
       <Add />
-      <Sidebar />
-      <ChangeTheme />
+      
+      {/* Temporary boxes to prevent overlap when zooming */}
+      <div className="fixed bottom-4 left-4 w-64 bg-base-200 border border-base-300 rounded-lg p-2 shadow-lg z-30">
+        <Sidebar />
+      </div>
+      
+      <div className="fixed bottom-4 left-72 w-64 bg-base-200 border border-base-300 rounded-lg p-2 shadow-lg z-30">
+        <ChangeTheme />
+      </div>
       
     </div>
   );

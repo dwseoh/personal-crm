@@ -77,6 +77,12 @@ export default function Sidebar() {
             Dashboard
           </button>
           <button
+            onClick={() => router.push("/contacts")}
+            className="px-4 py-3 text-left hover:bg-base-300 rounded-lg transition-colors duration-200 text-base-content"
+          >
+            Contacts
+          </button>
+          <button
             onClick={() => router.push("/profile")}
             className="px-4 py-3 text-left hover:bg-base-300 rounded-lg transition-colors duration-200 text-base-content"
           >

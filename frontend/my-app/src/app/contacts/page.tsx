@@ -15,6 +15,7 @@ export default function Contacts() {
     email: string;
     phone: string;
     notes: string;
+    created_at?: string;
   }
   const router = useRouter();
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -30,6 +31,8 @@ export default function Contacts() {
   const [availableGroups, setAvailableGroups] = useState<any[]>([]);
   const [contactGroups, setContactGroups] = useState<{[contactId: string]: string[]}>({});
   const [loadingGroups, setLoadingGroups] = useState(false);
+  const [viewMode, setViewMode] = useState<"block" | "list">("block");
+  const [selectedContactIds, setSelectedContactIds] = useState<Set<string>>(new Set());
   const editingRef = useRef<HTMLDivElement>(null);
 
   // Keyboard shortcut for search (Cmd+K / Ctrl+K)
@@ -294,10 +297,10 @@ export default function Contacts() {
       switch (sortBy) {
         case "name":
           return a.name.localeCompare(b.name);
-        case "newest":
+        case "oldest":
           // Assuming contacts have a created_at field or we use id as proxy
           return (b.id || "").localeCompare(a.id || "");
-        case "oldest":
+        case "newest":
           return (a.id || "").localeCompare(b.id || "");
         case "email":
           return a.email.localeCompare(b.email);
@@ -397,9 +400,59 @@ export default function Contacts() {
             </div>
           </div>
 
-          {/* Right side - Refresh button */}
-          <div className="flex-shrink-0">
-            <button
+          {/* Right side - View Toggle and Refresh button */}
+          <div className="flex-shrink-0 flex items-center space-x-8">
+            {/* View Toggle Buttons */}
+            <div className="flex items-center space-x-1 bg-base-300 rounded-lg p-1">
+              <button
+                onClick={() => setViewMode("block")}
+                className={`p-2 rounded transition-opacity ${
+                  viewMode === "block"
+                    ? "bg-base-100 text-base-content"
+                    : "text-base-content opacity-25 hover:opacity-100"
+                }`}
+                title="Block view"
+              >
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"
+                  />
+                </svg>
+              </button>
+              <button
+                onClick={() => setViewMode("list")}
+                className={`p-2 rounded transition-colors ${
+                  viewMode === "list"
+                    ? "bg-base-100 text-base-content"
+                    : "text-base-content opacity-25 hover:opacity-100"
+                }`}
+                title="List view"
+              >
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M4 6h16M4 12h16M4 18h16"
+                  />
+                </svg>
+              </button>
+            </div>
+
+            {/* <button
               onClick={refreshContacts}
               disabled={isRefreshing}
               className="flex items-center space-x-2 px-4 py-3 bg-primary text-primary-content rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50"
@@ -418,7 +471,7 @@ export default function Contacts() {
               />
             </svg>
               <span>{isRefreshing ? "Refreshing..." : "Refresh"}</span>
-            </button>
+            </button> */}
           </div>
 
           <div className="w-12"></div>
@@ -465,7 +518,7 @@ export default function Contacts() {
                   <option value="all">All Groups</option>
                   {availableGroups.map((group) => (
                     <option key={group.id} value={group.id}>
-                      {group.name}
+                      {group.name.length > 20 ? group.name.slice(0, 20) + "..." : group.name}
                     </option>
                   ))}
                 </select>
@@ -489,6 +542,29 @@ export default function Contacts() {
               </button>
             )}
 
+            {/* Delete Selected Button - Only show in list view when items are selected */}
+            {viewMode === "list" && selectedContactIds.size > 0 && (
+              <button
+                onClick={() => setShowDeleteModal(true)}
+                className="flex items-center space-x-2 px-3 py-2 bg-error text-error-content rounded-lg hover:opacity-90 transition-opacity"
+              >
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                  />
+                </svg>
+                <span>Delete ({selectedContactIds.size})</span>
+              </button>
+            )}
+
             {/* Results Count */}
             <div className="text-sm text-base-content opacity-70 ml-auto">
               {filteredAndSortedContacts.length} contact{filteredAndSortedContacts.length === 1 ? "" : "s"}
@@ -496,23 +572,184 @@ export default function Contacts() {
             </div>
           </div>
 
-          {/* Contacts grid */}
+          {/* Contacts display - Block or List view */}
           {contacts.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
-              {filteredAndSortedContacts.map((contact, index) => (
-                <Profiles
-                  key={
-                    contact.id || `${contact.name}-${contact.email}-${index}`
-                  }
-                  id={contact.id}
-                  name={contact.name}
-                  email={contact.email}
-                  phone={contact.phone}
-                  notes={contact.notes}
-                  onOpenPanel={handleOpenPanel}
-                />
-              ))}
-            </div>
+            viewMode === "block" ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+                {filteredAndSortedContacts.map((contact, index) => (
+                  <Profiles
+                    key={
+                      contact.id || `${contact.name}-${contact.email}-${index}`
+                    }
+                    id={contact.id}
+                    name={contact.name}
+                    email={contact.email}
+                    phone={contact.phone}
+                    notes={contact.notes}
+                    onOpenPanel={handleOpenPanel}
+                  />
+                ))}
+              </div>
+            ) : (
+              // List view with table
+              <div className="bg-base-200 border border-base-300 rounded-lg overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[800px]">
+                    {/* Table Header */}
+                    <thead className="bg-base-300 border-b border-base-300">
+                      <tr>
+                        <th className="px-4 py-3 text-left w-12">
+                          <input
+                            type="checkbox"
+                            checked={
+                              filteredAndSortedContacts.length > 0 &&
+                              filteredAndSortedContacts.every((c) => c.id && selectedContactIds.has(c.id))
+                            }
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                const allIds = new Set(
+                                  filteredAndSortedContacts
+                                    .filter((c) => c.id)
+                                    .map((c) => c.id!)
+                                );
+                                setSelectedContactIds(allIds);
+                              } else {
+                                setSelectedContactIds(new Set());
+                              }
+                            }}
+                            className="checkbox checkbox-sm"
+                          />
+                        </th>
+                        <th className="px-4 py-3 text-left text-sm font-semibold text-base-content">
+                          Name
+                        </th>
+                        <th className="px-4 py-3 text-left text-sm font-semibold text-base-content">
+                          Email
+                        </th>
+                        <th className="px-4 py-3 text-left text-sm font-semibold text-base-content">
+                          Phone
+                        </th>
+                        <th className="px-4 py-3 text-left text-sm font-semibold text-base-content">
+                          Created
+                        </th>
+                        <th className="px-4 py-3 text-left text-sm font-semibold text-base-content">
+                          Notes
+                        </th>
+                        <th className="px-4 py-3 text-left w-12"></th>
+                      </tr>
+                    </thead>
+
+                    {/* Table Body */}
+                    <tbody>
+                      {filteredAndSortedContacts.map((contact, index) => {
+                        const isSelected = contact.id ? selectedContactIds.has(contact.id) : false;
+                        return (
+                        <tr
+                          key={contact.id || `${contact.name}-${contact.email}-${index}`}
+                          className="border-b border-base-300 transition-all relative group"
+                          style={{
+                            backgroundColor: isSelected ? 'rgba(0, 0, 0, 0.15)' : 'transparent'
+                          }}
+                          onMouseEnter={(e) => {
+                            if (isSelected) {
+                              e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.25)';
+                            } else {
+                              e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.08)';
+                            }
+                          }}
+                          onMouseLeave={(e) => {
+                            if (isSelected) {
+                              e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.15)';
+                            } else {
+                              e.currentTarget.style.backgroundColor = 'transparent';
+                            }
+                          }}
+                        >
+                          <td className="px-4 py-3">
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={(e) => {
+                                if (!contact.id) return;
+                                const newSelected = new Set(selectedContactIds);
+                                if (e.target.checked) {
+                                  newSelected.add(contact.id);
+                                } else {
+                                  newSelected.delete(contact.id);
+                                }
+                                setSelectedContactIds(newSelected);
+                              }}
+                              onClick={(e) => e.stopPropagation()}
+                              className="checkbox checkbox-sm"
+                            />
+                          </td>
+                          <td
+                            className="px-4 py-3 cursor-pointer"
+                            onClick={() => handleOpenPanel(contact)}
+                          >
+                            <div className="flex items-center space-x-3">
+                              <div className="w-8 h-8 rounded-full bg-primary text-primary-content flex items-center justify-center font-semibold text-sm flex-shrink-0">
+                                {contact.name.charAt(0).toUpperCase()}
+                              </div>
+                              <span className="font-medium text-base-content">
+                                {contact.name}
+                              </span>
+                            </div>
+                          </td>
+                          <td
+                            className="px-4 py-3 text-sm text-base-content opacity-70 cursor-pointer"
+                            onClick={() => handleOpenPanel(contact)}
+                          >
+                            {contact.email}
+                          </td>
+                          <td
+                            className="px-4 py-3 text-sm text-base-content opacity-70 cursor-pointer"
+                            onClick={() => handleOpenPanel(contact)}
+                          >
+                            {contact.phone}
+                          </td>
+                          <td
+                            className="px-4 py-3 text-sm text-base-content opacity-70 cursor-pointer"
+                            onClick={() => handleOpenPanel(contact)}
+                          >
+                            {contact.created_at
+                              ? new Date(contact.created_at).toLocaleDateString()
+                              : "N/A"}
+                          </td>
+                          <td
+                            className="px-4 py-3 text-sm text-base-content opacity-70 cursor-pointer max-w-xs truncate"
+                            onClick={() => handleOpenPanel(contact)}
+                          >
+                            {contact.notes || "-"}
+                          </td>
+                          <td className="px-4 py-3">
+                            <button
+                              onClick={() => handleOpenPanel(contact)}
+                              className="text-base-content opacity-50 hover:opacity-100 transition-opacity"
+                            >
+                              <svg
+                                className="w-5 h-5"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M9 5l7 7-7 7"
+                                />
+                              </svg>
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )
           ) : (
             /* Empty state - show different messages based on context */
             hasInitialLoad && (
@@ -567,6 +804,59 @@ export default function Contacts() {
         onContactUpdate={handleContactUpdate}
         onContactDeleted={refreshContacts}
       />
+
+      {/* Bulk Delete Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 bg-base-100 bg-opacity-50 z-[60] flex items-center justify-center p-4">
+          <div className="bg-base-100 border border-base-300 p-6 rounded-xl shadow-2xl relative w-96 max-w-full">
+            <h3 className="text-xl font-bold text-base-content mb-4">
+              Delete Selected Contacts
+            </h3>
+            <p className="text-base-content opacity-70 mb-6">
+              Are you sure you want to delete {selectedContactIds.size} contact{selectedContactIds.size === 1 ? "" : "s"}? This action cannot be undone.
+            </p>
+            <div className="flex space-x-3 justify-end">
+              <button
+                onClick={() => setShowDeleteModal(false)}
+                className="px-4 py-2 bg-base-300 text-base-content rounded-lg hover:bg-base-100 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={async () => {
+                  const token = localStorage.getItem("token");
+                  if (!token) return;
+
+                  try {
+                    // Delete all selected contacts
+                    await Promise.all(
+                      Array.from(selectedContactIds).map(async (contactId) => {
+                        const res = await fetch(`http://127.0.0.1:8000/contacts/${contactId}`, {
+                          method: "DELETE",
+                          headers: { Authorization: `Bearer ${token}` },
+                        });
+                        if (!res.ok) throw new Error("Failed to delete contact");
+                      })
+                    );
+
+                    // Clear selection and refresh
+                    setSelectedContactIds(new Set());
+                    setShowDeleteModal(false);
+                    refreshContacts();
+                  } catch (error) {
+                    console.error("Error deleting contacts:", error);
+                    alert("Failed to delete some contacts. Please try again.");
+                  }
+                }}
+                className="px-4 py-2 bg-error text-error-content rounded-lg hover:opacity-90 transition-opacity"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <Add />
       
       {/* Temporary boxes to prevent overlap when zooming */}

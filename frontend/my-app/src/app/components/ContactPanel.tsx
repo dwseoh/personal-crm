@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import GroupCreator from "./GroupCreator";
 import { useRouter } from "next/navigation";
 
@@ -24,6 +24,7 @@ interface ContactPanelProps {
   onClosePanel: () => void;
   onContactUpdate: (updatedContact: Contact) => void;
   onContactDeleted?: () => void;
+  onWidthChange?: (widthPct: number) => void; //
 }
 
 export default function ContactPanel({
@@ -32,6 +33,7 @@ export default function ContactPanel({
   onClosePanel,
   onContactUpdate,
   onContactDeleted,
+  onWidthChange, //
 }: ContactPanelProps) {
   const [isEditing, setIsEditing] = useState(false);
   const router = useRouter();
@@ -51,7 +53,45 @@ export default function ContactPanel({
   const [selectedGroups, setSelectedGroups] = useState<string[]>([]);
 
   const [showGroupCreator, setShowGroupCreator] = useState(false);
+  const [panelWidthPct, setPanelWidthPct] = useState(26); // 25% of viewport
+  const isResizing = useRef(false);
 
+  const onMouseDown = () => {
+    isResizing.current = true;
+    document.body.style.cursor = "ew-resize";
+    document.body.style.userSelect = "none"; // prevent text selection
+  };
+
+  const onMouseMove = (e: MouseEvent) => {
+    if (isResizing.current) {
+      const newWidthPx = window.innerWidth - e.clientX; // since panel is right-aligned
+      const newWidthPct = (newWidthPx / window.innerWidth) * 100;
+
+      if (newWidthPct > 26 && newWidthPct < 50) {
+        // min/max width
+        setPanelWidthPct(newWidthPct);
+        onWidthChange?.(newWidthPct);
+      }
+    }
+  };
+
+  const onMouseUp = () => {
+    if (isResizing.current) {
+      isResizing.current = false;
+      document.body.style.cursor = "default";
+      document.body.style.userSelect = "auto"; // restore selection
+    }
+  };
+
+  // Attach/remove global listeners
+  useEffect(() => {
+    window.addEventListener("mousemove", onMouseMove);
+    window.addEventListener("mouseup", onMouseUp);
+    return () => {
+      window.removeEventListener("mousemove", onMouseMove);
+      window.removeEventListener("mouseup", onMouseUp);
+    };
+  }, []);
   // Load groups and contact groups when contact changes
   useEffect(() => {
     if (selectedContact?.id) {
@@ -91,7 +131,7 @@ export default function ContactPanel({
 
     const token = localStorage.getItem("token");
     setIsDeleting(true);
-    
+
     try {
       const res = await fetch(
         `http://127.0.0.1:8000/contacts/${selectedContact.id}`,
@@ -102,7 +142,7 @@ export default function ContactPanel({
           },
         }
       );
-      
+
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}));
         if (errData.detail?.includes("expired")) {
@@ -232,7 +272,7 @@ export default function ContactPanel({
     const confirmed = window.confirm(
       `Are you sure you want to delete the group "${groupName}"? This action is irreversible and will remove the group from all contacts.`
     );
-    
+
     if (!confirmed) return;
 
     const token = localStorage.getItem("token");
@@ -248,11 +288,11 @@ export default function ContactPanel({
 
       if (res.ok) {
         // Remove the group from available groups
-        setAvailableGroups(availableGroups.filter(g => g.id !== groupId));
+        setAvailableGroups(availableGroups.filter((g) => g.id !== groupId));
         // Remove the group from selected groups if it was selected
-        setSelectedGroups(selectedGroups.filter(id => id !== groupId));
+        setSelectedGroups(selectedGroups.filter((id) => id !== groupId));
         // Remove the group from contact groups if it was assigned
-        setContactGroups(contactGroups.filter(id => id !== groupId));
+        setContactGroups(contactGroups.filter((id) => id !== groupId));
       } else {
         const errorData = await res.json();
         alert(errorData.detail || "Failed to delete group");
@@ -263,61 +303,72 @@ export default function ContactPanel({
     }
   };
 
-
-
   if (!selectedContact) return null;
 
   return (
     <>
       <div
-        className={`fixed top-0 right-0 h-full w-96 bg-base-200 border-l border-base-300 shadow-xl transform transition-transform duration-300 z-50 ${
+        style={{ width: `${panelWidthPct}vw` }} // vw = viewport width
+        className={`fixed top-0 right-0 h-full bg-base-200 border-l border-base-300 shadow-xl transform transition-transform duration-300 z-50 ${
           isPanelOpen ? "translate-x-0" : "translate-x-full"
         }`}
       >
-      <div className="h-full flex flex-col">
-        {/* Panel header */}
-        <div className="flex items-center justify-between p-6 border-b border-base-300">
-          <h2 className="text-xl font-bold text-base-content">
-            Contact Details
-          </h2>
-          <button
-            onClick={handleClosePanel}
-            className="text-base-content opacity-70 hover:opacity-100 hover:bg-base-300 rounded-full p-2 transition-all"
-          >
-            <svg
-              className="w-5 h-5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
+        {/* Resizer */}
+        <div
+          onMouseDown={onMouseDown}
+          className="absolute left-0 top-0 h-full w-2 cursor-ew-resize bg-gray-300 hover:bg-gray-400 z-50"
+        />
+
+        <div className="h-full flex flex-col">
+          {/* Panel header */}
+          <div className="flex items-center justify-between p-6 border-b border-base-300">
+            <h2 className="text-xl font-bold text-base-content">
+              Contact Details
+            </h2>
+            <button
+              onClick={handleClosePanel}
+              className="text-base-content opacity-70 hover:opacity-100 hover:bg-base-300 rounded-full p-2 transition-all"
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="M6 18L18 6M6 6l12 12"
-              />
-            </svg>
-          </button>
-        </div>
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+            </button>
+          </div>
 
-        {/* Panel content */}
-        <div className="flex-1 p-6 overflow-y-auto">
-          <div className="flex items-center space-x-4 mb-6">
-            <div className="w-20 h-20 bg-primary text-primary-content rounded-full flex items-center justify-center text-2xl font-bold">
-              {selectedContact.name.charAt(0).toUpperCase()}
-            </div>
-            <div className="flex-1">
-              <h3 className="text-2xl font-bold text-base-content">
-                {selectedContact.name}
-              </h3>
-              <p className="text-base-content opacity-70">
-                Contact Information
-              </p>
-            </div>
+          {/* Panel content */}
+          <div className="flex-1 p-6 overflow-y-auto">
+            <div className="flex items-center space-x-4 mb-6">
+              <div className="w-20 h-20 bg-primary text-primary-content rounded-full flex flex-shrink-0 items-center justify-center text-2xl font-bold">
+                {selectedContact.name.charAt(0).toUpperCase()}
+              </div>
+              <div className="flex-1">
+                <h3
+                  style={{
+                    maxWidth:
+                      (panelWidthPct / 100) * window.innerWidth - 180 - 112, // viewport width fraction minus avatar & button widths
+                  }}
+                  className="text-2xl font-bold text-base-content truncate"
+                >
+                  {selectedContact.name}
+                </h3>
+                <p className="text-base-content opacity-70">
+                  Contact Information
+                </p>
+              </div>
 
-            {/* Edit/Save buttons */}
-                <div className="flex space-x-2">
-                  {!isEditing ? (
+              {/* Edit/Save buttons */}
+              <div className="flex flex-col items-end w-28 flex-shrink-0 space-y-2">
+                {!isEditing ? (
                   <>
                     <button
                       onClick={handleEditToggle}
@@ -342,7 +393,7 @@ export default function ContactPanel({
                       onClick={() => setShowDeleteModal(true)}
                       disabled={isDeleting}
                       className="px-3 py-2 bg-error text-error-content rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center space-x-2"
-                      >
+                    >
                       <svg
                         className="w-4 h-4"
                         fill="none"
@@ -357,267 +408,305 @@ export default function ContactPanel({
                         />
                       </svg>
                       <span>{isDeleting ? "Deleting..." : "Delete"}</span>
-                      
-                      </button>
+                    </button>
                   </>
-                  ) : (
-                    <>
-                      <button
-                        onClick={handleUpdateContact}
-                        disabled={isUpdating || isDeleting}
-                        className="px-3 py-2 bg-success text-success-content rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center space-x-2"
+                ) : (
+                  <>
+                    <button
+                      onClick={handleUpdateContact}
+                      disabled={isUpdating || isDeleting}
+                      className="px-3 py-2 bg-success text-success-content rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center space-x-2"
+                    >
+                      <svg
+                        className="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
                       >
-                        <svg
-                          className="w-4 h-4"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth="2"
-                            d="M5 13l4 4L19 7"
-                          />
-                        </svg>
-                        <span>{isUpdating ? "Saving..." : "Save"}</span>
-                      </button>
-                      <button
-                        onClick={handleEditToggle}
-                        disabled={isUpdating || isDeleting}
-                        className="px-3 py-2 bg-base-300 text-base-content rounded-lg hover:bg-base-200 transition-colors disabled:opacity-50"
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth="2"
+                          d="M5 13l4 4L19 7"
+                        />
+                      </svg>
+                      <span>{isUpdating ? "Saving..." : "Save"}</span>
+                    </button>
+                    <button
+                      onClick={handleEditToggle}
+                      disabled={isUpdating || isDeleting}
+                      className="px-3 py-2 bg-base-300 text-base-content rounded-lg hover:bg-base-200 transition-colors disabled:opacity-50"
+                    >
+                      Cancel
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+
+            <div className="space-y-6">
+              {/* Contact Fields */}
+              {/* Name Field */}
+              <div className="relative">
+                <label className="block text-sm font-medium text-base-content opacity-70 mb-2">
+                  Name
+                </label>
+                {isEditing ? (
+                  <input
+                    type="text"
+                    value={editForm.name}
+                    onChange={(e) =>
+                      setEditForm({ ...editForm, name: e.target.value })
+                    }
+                    maxLength={100}
+                    className="w-full p-3 pr-18 bg-base-100 border border-base-300 rounded-lg text-base-content focus:outline-none focus:ring-2 focus:ring-primary"
+                    placeholder="Enter name"
+                  />
+                ) : (
+                  <input
+                    type="text"
+                    value={editForm.name}
+                    readOnly
+                    maxLength={100}
+                    className="w-full pr-18 p-3 bg-base-100 border border-base-300 rounded-lg text-base-content focus:outline-none focus:ring-2 focus:ring-primary"
+                    placeholder="Enter name"
+                  />
+                )}
+                <span className="absolute right-3 top-2/3 transform -translate-y-1/2 -translate-y-2 text-sm text-base-content opacity-70">
+                  {editForm.name.length} / 100
+                </span>
+              </div>
+
+              {/* Email Field */}
+              <div className="relative">
+                <label className="block text-sm font-medium text-base-content opacity-70 mb-2">
+                  Email Address
+                </label>
+                {isEditing ? (
+                  <input
+                    type="email"
+                    value={editForm.email}
+                    maxLength={100}
+                    onChange={(e) =>
+                      setEditForm({ ...editForm, email: e.target.value })
+                    }
+                    className="w-full p-3 pr-18 bg-base-100 border border-base-300 rounded-lg text-base-content focus:outline-none focus:ring-2 focus:ring-primary"
+                    placeholder="Enter email address"
+                  />
+                ) : (
+                  <input
+                    type="email"
+                    value={editForm.email}
+                    maxLength={100}
+                    readOnly
+                    className="w-full p-3 pr-18 bg-base-100 border border-base-300 rounded-lg text-base-content focus:outline-none focus:ring-2 focus:ring-primary"
+                    placeholder="Enter email address"
+                  />
+                )}
+                <span className="absolute right-3 top-2/3 transform -translate-y-1/2 -translate-y-2 text-sm text-base-content opacity-70">
+                  {editForm.email.length} / 100
+                </span>
+              </div>
+
+              {/* Phone Field */}
+              <div className="relative">
+                <label className="block text-sm font-medium text-base-content opacity-70 mb-2">
+                  Phone Number
+                </label>
+                {isEditing ? (
+                  <input
+                    type="tel"
+                    value={editForm.phone}
+                    maxLength={20}
+                    onChange={(e) =>
+                      setEditForm({ ...editForm, phone: e.target.value })
+                    }
+                    className="w-full p-3 pr-16 bg-base-100 border border-base-300 rounded-lg text-base-content focus:outline-none focus:ring-2 focus:ring-primary"
+                    placeholder="Enter phone number"
+                  />
+                ) : (
+                  <input
+                    type="tel"
+                    value={editForm.phone}
+                    maxLength={20}
+                    readOnly
+                    className="w-full p-3 pr-16 bg-base-100 border border-base-300 rounded-lg text-base-content focus:outline-none focus:ring-2 focus:ring-primary"
+                    placeholder="Enter phone number"
+                  />
+                )}
+                <span className="absolute right-3 top-2/3 transform -translate-y-1/2 -translate-y-2 text-sm text-base-content opacity-70">
+                  {editForm.phone.length} / 20
+                </span>
+              </div>
+
+              {/* Notes Field */}
+              <div className="flex flex-col relative">
+                <label className="block text-sm font-medium text-base-content opacity-70 mb-2">
+                  Notes
+                </label>
+                {isEditing ? (
+                  <textarea
+                    value={editForm.notes}
+                    onChange={(e) =>
+                      setEditForm({ ...editForm, notes: e.target.value })
+                    }
+                    rows={4}
+                    maxLength={500}
+                    className="w-full p-3 bg-base-100 border border-base-300 rounded-lg text-base-content focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+                    placeholder="Enter notes (optional)"
+                  />
+                ) : (
+                  <div>
+                    <textarea
+                      className="w-full p-3 bg-base-100 border border-base-300 rounded-lg text-base-content focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+                      readOnly
+                      rows={4}
+                      value={selectedContact.notes || "No notes provided"}
+                    />
+                  </div>
+                )}
+                <span className="self-end text-sm text-base-content opacity-70 mt-1">
+                  {editForm.notes.length} / 500
+                </span>
+              </div>
+
+              {/* Groups Section */}
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <label className="block text-sm font-medium text-base-content opacity-70">
+                    Groups
+                  </label>
+                  {isEditing && (
+                    <button
+                      onClick={() => setShowGroupCreator(true)}
+                      className="flex items-center space-x-1 px-3 py-2 rounded-lg text-sm font-medium transition-all bg-primary/10 text-primary hover:bg-primary hover:text-primary-content"
+                    >
+                      <svg
+                        className="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
                       >
-                        Cancel
-                      </button>
-                    </>
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth="2"
+                          d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+                        />
+                      </svg>
+                      <span>New Group</span>
+                    </button>
                   )}
                 </div>
-              </div>
 
-          <div className="space-y-6">
-            {/* Contact Fields */}
-            {/* Name Field */}
-            <div>
-              <label className="block text-sm font-medium text-base-content opacity-70 mb-2">
-                Name
-              </label>
-              {isEditing ? (
-                <input
-                  type="text"
-                  value={editForm.name}
-                  onChange={(e) =>
-                    setEditForm({ ...editForm, name: e.target.value })
-                  }
-                  className="w-full p-3 bg-base-100 border border-base-300 rounded-lg text-base-content focus:outline-none focus:ring-2 focus:ring-primary"
-                  placeholder="Enter name"
-                />
-              ) : (
-                <div className="p-3 bg-base-100 border border-base-300 rounded-lg">
-                  <p className="text-base-content">
-                    {selectedContact.name || "No name provided"}
-                  </p>
-                </div>
-              )}
-            </div>
-
-            {/* Email Field */}
-            <div>
-              <label className="block text-sm font-medium text-base-content opacity-70 mb-2">
-                Email Address
-              </label>
-              {isEditing ? (
-                <input
-                  type="email"
-                  value={editForm.email}
-                  onChange={(e) =>
-                    setEditForm({ ...editForm, email: e.target.value })
-                  }
-                  className="w-full p-3 bg-base-100 border border-base-300 rounded-lg text-base-content focus:outline-none focus:ring-2 focus:ring-primary"
-                  placeholder="Enter email address"
-                />
-              ) : (
-                <div className="p-3 bg-base-100 border border-base-300 rounded-lg">
-                  <p className="text-base-content">
-                    {selectedContact.email || "No email provided"}
-                  </p>
-                </div>
-              )}
-            </div>
-
-            {/* Phone Field */}
-            <div>
-              <label className="block text-sm font-medium text-base-content opacity-70 mb-2">
-                Phone Number
-              </label>
-              {isEditing ? (
-                <input
-                  type="tel"
-                  value={editForm.phone}
-                  onChange={(e) =>
-                    setEditForm({ ...editForm, phone: e.target.value })
-                  }
-                  className="w-full p-3 bg-base-100 border border-base-300 rounded-lg text-base-content focus:outline-none focus:ring-2 focus:ring-primary"
-                  placeholder="Enter phone number"
-                />
-              ) : (
-                <div className="p-3 bg-base-100 border border-base-300 rounded-lg">
-                  <p className="text-base-content">
-                    {selectedContact.phone || "No phone number provided"}
-                  </p>
-                </div>
-              )}
-            </div>
-
-            {/* Notes Field */}
-            <div>
-              <label className="block text-sm font-medium text-base-content opacity-70 mb-2">
-                Notes
-              </label>
-              {isEditing ? (
-                <textarea
-                  value={editForm.notes}
-                  onChange={(e) =>
-                    setEditForm({ ...editForm, notes: e.target.value })
-                  }
-                  rows={4}
-                  className="w-full p-3 bg-base-100 border border-base-300 rounded-lg text-base-content focus:outline-none focus:ring-2 focus:ring-primary resize-none"
-                  placeholder="Enter notes (optional)"
-                />
-              ) : (
-                <div className="p-3 bg-base-100 border border-base-300 rounded-lg min-h-[100px]">
-                  <p className="text-base-content whitespace-pre-wrap">
-                    {selectedContact.notes || "No notes provided"}
-                  </p>
-                </div>
-              )}
-            </div>
-
-            {/* Groups Section */}
-            <div>
-              <div className="flex items-center justify-between mb-3">
-                <label className="block text-sm font-medium text-base-content opacity-70">
-                  Groups
-                </label>
-                {isEditing && (
-                  <button
-                    onClick={() => setShowGroupCreator(true)}
-                    className="flex items-center space-x-1 px-3 py-2 rounded-lg text-sm font-medium transition-all bg-primary/10 text-primary hover:bg-primary hover:text-primary-content"
-                  >
-                    <svg
-                      className="w-4 h-4"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2"
-                        d="M12 6v6m0 0v6m0-6h6m-6 0H6"
-                      />
-                    </svg>
-                    <span>New Group</span>
-                  </button>
-                )}
-              </div>
-
-              {/* Group Tags */}
-              <div className="space-y-3">
-                {/* Current Groups (Read-only) */}
-                {!isEditing && (
-                  <div className="flex flex-wrap gap-2">
-                    {contactGroups.length > 0 ? (
-                      contactGroups.map((groupId) => {
-                        const group = getGroupById(groupId);
-                        return group ? (
-                          <span
-                            key={groupId}
-                            className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium text-white max-w-32 truncate"
-                            style={{ backgroundColor: group.color }}
-                            title={group.name}
-                          >
-                            {group.name}
-                          </span>
-                        ) : null;
-                      })
-                    ) : (
-                      <p className="text-base-content opacity-50 text-sm">
-                        No groups assigned
-                      </p>
-                    )}
-                  </div>
-                )}
-
-                {/* Editable Groups */}
-                {isEditing && (
-                  <div className="space-y-3">
+                {/* Group Tags */}
+                <div className="space-y-3">
+                  {/* Current Groups (Read-only) */}
+                  {!isEditing && (
                     <div className="flex flex-wrap gap-2">
-                      {availableGroups
-                        .sort((a, b) => {
-                          const aSelected = selectedGroups.includes(a.id);
-                          const bSelected = selectedGroups.includes(b.id);
-                          if (aSelected && !bSelected) return -1;
-                          if (!aSelected && bSelected) return 1;
-                          return a.name.localeCompare(b.name);
+                      {contactGroups.length > 0 ? (
+                        contactGroups.map((groupId) => {
+                          const group = getGroupById(groupId);
+                          return group ? (
+                            <span
+                              key={groupId}
+                              className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium text-white max-w-32 truncate overflow-hidden whitespace-nowrap"
+                              style={{ backgroundColor: group.color }}
+                              title={group.name}
+                            >
+                              <span className="truncate max-w-32 block">
+                                {group.name}
+                              </span>
+                            </span>
+                          ) : null;
                         })
-                        .map((group) => (
-                        <div
-                          key={group.id}
-                          className="relative inline-flex items-center"
-                        >
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDeleteGroup(group.id, group.name);
-                            }}
-                            className="absolute left-1 z-10 p-0.5 hover:bg-black/20 rounded-full"
-                            title={`Delete ${group.name}`}
-                          >
-                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                          </button>
-                          <button
-                            onClick={() => toggleGroupSelection(group.id)}
-                            className={`inline-flex items-center pl-6 pr-3 py-1 rounded-full text-sm font-medium transition-all max-w-32 ${
-                              selectedGroups.includes(group.id)
-                                ? "text-white ring-2 ring-base-content"
-                                : "text-white opacity-50 hover:opacity-75"
-                            }`}
-                            style={{ backgroundColor: group.color }}
-                            title={group.name}
-                          >
-                            <span className="truncate">{group.name}</span>
-                            {selectedGroups.includes(group.id) && (
-                              <svg
-                                className="w-4 h-4 ml-1"
-                                fill="currentColor"
-                                viewBox="0 0 20 20"
-                              >
-                                <path
-                                  fillRule="evenodd"
-                                  d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                                  clipRule="evenodd"
-                                />
-                              </svg>
-                            )}
-                          </button>
-                        </div>
-                      ))}
+                      ) : (
+                        <p className="text-base-content opacity-50 text-sm">
+                          No groups assigned
+                        </p>
+                      )}
                     </div>
-                    {availableGroups.length === 0 && (
-                      <p className="text-base-content opacity-50 text-sm">
-                        No groups available. Create one above!
-                      </p>
-                    )}
-                  </div>
-                )}
+                  )}
+
+                  {/* Editable Groups */}
+                  {isEditing && (
+                    <div className="space-y-3">
+                      <div className="flex flex-wrap gap-2">
+                        {availableGroups
+                          .sort((a, b) => {
+                            const aSelected = selectedGroups.includes(a.id);
+                            const bSelected = selectedGroups.includes(b.id);
+                            if (aSelected && !bSelected) return -1;
+                            if (!aSelected && bSelected) return 1;
+                            return a.name.localeCompare(b.name);
+                          })
+                          .map((group) => (
+                            <div
+                              key={group.id}
+                              className="relative inline-flex items-center"
+                            >
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeleteGroup(group.id, group.name);
+                                }}
+                                className="absolute left-1 z-10 p-0.5 hover:bg-black/20 rounded-full"
+                                title={`Delete ${group.name}`}
+                              >
+                                <svg
+                                  className="w-3 h-3"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth="2"
+                                    d="M6 18L18 6M6 6l12 12"
+                                  />
+                                </svg>
+                              </button>
+                              <button
+                                onClick={() => toggleGroupSelection(group.id)}
+                                className={`inline-flex items-center pl-6 pr-3 py-1 rounded-full text-sm font-medium transition-all max-w-32 ${
+                                  selectedGroups.includes(group.id)
+                                    ? "text-white ring-2 ring-base-content"
+                                    : "text-white opacity-50 hover:opacity-75"
+                                }`}
+                                style={{ backgroundColor: group.color }}
+                                title={group.name}
+                              >
+                                <span className="truncate">{group.name}</span>
+                                {selectedGroups.includes(group.id) && (
+                                  <svg
+                                    className="w-4 h-4 ml-1"
+                                    fill="currentColor"
+                                    viewBox="0 0 20 20"
+                                  >
+                                    <path
+                                      fillRule="evenodd"
+                                      d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                                      clipRule="evenodd"
+                                    />
+                                  </svg>
+                                )}
+                              </button>
+                            </div>
+                          ))}
+                      </div>
+                      {availableGroups.length === 0 && (
+                        <p className="text-base-content opacity-50 text-sm">
+                          No groups available. Create one above!
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
-
       </div>
 
       {/* Delete Modal - Now outside the positioned panel */}
@@ -626,7 +715,8 @@ export default function ContactPanel({
           <div className="bg-base-100 border border-base-300 p-6 rounded-xl shadow-2xl relative w-96 max-w-full">
             <h3 className="text-lg font-bold mb-4">Delete Contact</h3>
             <p className="mb-6">
-              Are you sure you want to delete {selectedContact?.name}? This action cannot be undone.
+              Are you sure you want to delete {selectedContact?.name}? This
+              action cannot be undone.
             </p>
             <div className="flex justify-end space-x-3">
               <button

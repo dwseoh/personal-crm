@@ -24,6 +24,15 @@ export default function Contacts() {
   const [hasInitialLoad, setHasInitialLoad] = useState(false);
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
   const [isPanelOpen, setIsPanelOpen] = useState(false);
+  const [panelWidthPct, setPanelWidthPct] = useState(26);
+  const [hasOpenedOnce, setHasOpenedOnce] = useState(false);
+
+  useEffect(() => {
+    if (isPanelOpen && !hasOpenedOnce) {
+      setHasOpenedOnce(true);
+    }
+  }, [isPanelOpen]);
+
   const [searchQuery, setSearchQuery] = useState("");
   const editingRef = useRef<HTMLDivElement>(null);
 
@@ -86,8 +95,6 @@ export default function Contacts() {
     // Update cache
     localStorage.setItem("cached_contacts", JSON.stringify(updatedContacts));
   };
-
-
 
   // Load cached contacts immediately
   useEffect(() => {
@@ -281,9 +288,11 @@ export default function Contacts() {
 
       {/* Main content area - Only this part shrinks */}
       <div
-        className={`transition-all duration-300 ${
-          isPanelOpen ? "mr-96" : "mr-0"
-        }`}
+        className={`transition-all duration-300 `}
+        style={{
+          marginRight: isPanelOpen ? `${panelWidthPct}vw` : 0,
+          transition: !hasOpenedOnce ? "margin-right 0.3s" : "none",
+        }}
       >
         <div className="max-w-7xl mx-auto px-8 py-8">
           {/* Search Bar */}
@@ -333,7 +342,7 @@ export default function Contacts() {
 
           {/* Contacts grid */}
           {contacts.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+            <div className="grid gap-6 grid-cols-[repeat(auto-fit,minmax(220px,1fr))]">
               {filteredContacts.map((contact, index) => (
                 <Profiles
                   key={
@@ -388,11 +397,11 @@ export default function Contacts() {
         onClosePanel={handleClosePanel}
         onContactUpdate={handleContactUpdate}
         onContactDeleted={refreshContacts}
+        onWidthChange={(widthPct) => setPanelWidthPct(widthPct)}
       />
       <Add />
       <Sidebar />
       <ChangeTheme />
-      
     </div>
   );
 }

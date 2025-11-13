@@ -463,18 +463,18 @@ export default function ContactPanel({
                     placeholder="Enter name"
                   />
                 ) : (
-                  <input
-                    type="text"
-                    value={editForm.name}
-                    readOnly
-                    maxLength={100}
-                    className="w-full pr-18 p-3 bg-base-100 border border-base-300 rounded-lg text-base-content focus:outline-none focus:ring-2 focus:ring-primary"
-                    placeholder="Enter name"
-                  />
+                  <div 
+                    className="w-full pr-18 p-3 bg-base-100 border border-base-300 rounded-lg text-base-content cursor-default"
+                    style={{ userSelect: 'none', WebkitUserSelect: 'none' }}
+                  >
+                    {editForm.name}
+                  </div>
                 )}
-                <span className="absolute right-3 top-2/3 transform -translate-y-1/2 -translate-y-2 text-sm text-base-content opacity-70">
-                  {editForm.name.length} / 100
-                </span>
+                {isEditing && (
+                  <span className="absolute right-3 top-2/3 transform -translate-y-1/2 text-sm text-base-content opacity-70">
+                    {editForm.name.length} / 100
+                  </span>
+                )}
               </div>
 
               {/* Email Field */}
@@ -494,18 +494,18 @@ export default function ContactPanel({
                     placeholder="Enter email address"
                   />
                 ) : (
-                  <input
-                    type="email"
-                    value={editForm.email}
-                    maxLength={100}
-                    readOnly
-                    className="w-full p-3 pr-18 bg-base-100 border border-base-300 rounded-lg text-base-content focus:outline-none focus:ring-2 focus:ring-primary"
-                    placeholder="Enter email address"
-                  />
+                  <div 
+                    className="w-full p-3 pr-18 bg-base-100 border border-base-300 rounded-lg text-base-content cursor-default"
+                    style={{ userSelect: 'none', WebkitUserSelect: 'none' }}
+                  >
+                    {editForm.email}
+                  </div>
                 )}
-                <span className="absolute right-3 top-2/3 transform -translate-y-1/2 -translate-y-2 text-sm text-base-content opacity-70">
-                  {editForm.email.length} / 100
-                </span>
+                {isEditing && (
+                  <span className="absolute right-3 top-2/3 transform -translate-y-1/2 text-sm text-base-content opacity-70">
+                    {editForm.email.length} / 100
+                  </span>
+                )}
               </div>
 
               {/* Phone Field */}
@@ -525,18 +525,18 @@ export default function ContactPanel({
                     placeholder="Enter phone number"
                   />
                 ) : (
-                  <input
-                    type="tel"
-                    value={editForm.phone}
-                    maxLength={20}
-                    readOnly
-                    className="w-full p-3 pr-16 bg-base-100 border border-base-300 rounded-lg text-base-content focus:outline-none focus:ring-2 focus:ring-primary"
-                    placeholder="Enter phone number"
-                  />
+                  <div 
+                    className="w-full p-3 pr-16 bg-base-100 border border-base-300 rounded-lg text-base-content cursor-default"
+                    style={{ userSelect: 'none', WebkitUserSelect: 'none' }}
+                  >
+                    {editForm.phone}
+                  </div>
                 )}
-                <span className="absolute right-3 top-2/3 transform -translate-y-1/2 -translate-y-2 text-sm text-base-content opacity-70">
-                  {editForm.phone.length} / 20
-                </span>
+                {isEditing && (
+                  <span className="absolute right-3 top-2/3 transform -translate-y-1/2 text-sm text-base-content opacity-70">
+                    {editForm.phone.length} / 20
+                  </span>
+                )}
               </div>
 
               {/* Notes Field */}
@@ -556,18 +556,18 @@ export default function ContactPanel({
                     placeholder="Enter notes (optional)"
                   />
                 ) : (
-                  <div>
-                    <textarea
-                      className="w-full p-3 bg-base-100 border border-base-300 rounded-lg text-base-content focus:outline-none focus:ring-2 focus:ring-primary resize-none"
-                      readOnly
-                      rows={4}
-                      value={selectedContact.notes || "No notes provided"}
-                    />
+                  <div 
+                    className="w-full p-3 bg-base-100 border border-base-300 rounded-lg text-base-content cursor-default min-h-[112px]"
+                    style={{ userSelect: 'none', WebkitUserSelect: 'none' }}
+                  >
+                    {selectedContact.notes || "No notes provided"}
                   </div>
                 )}
-                <span className="self-end text-sm text-base-content opacity-70 mt-1">
-                  {editForm.notes.length} / 500
-                </span>
+                {isEditing && (
+                  <span className="self-end text-sm text-base-content opacity-70 mt-1">
+                    {editForm.notes.length} / 500
+                  </span>
+                )}
               </div>
 
               {/* Groups Section */}

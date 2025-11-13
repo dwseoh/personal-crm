@@ -448,7 +448,7 @@ export default function Contacts() {
               </button>
               <button
                 onClick={() => setViewMode("list")}
-                className={`p-2 rounded transition-colors ${
+                className={`p-2 rounded transition-opacity ${
                   viewMode === "list"
                     ? "bg-base-100 text-base-content"
                     : "text-base-content opacity-25 hover:opacity-100"

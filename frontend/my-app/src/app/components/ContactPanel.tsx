@@ -269,8 +269,14 @@ export default function ContactPanel({
   };
 
   const handleDeleteGroup = async (groupId: string, groupName: string) => {
+    const nameLength = 10;
+    const truncatedName =
+      groupName.length > nameLength
+        ? groupName.slice(0, nameLength) + "…"
+        : groupName;
+
     const confirmed = window.confirm(
-      `Are you sure you want to delete the group "${groupName}"? This action is irreversible and will remove the group from all contacts.`
+      `Are you sure you want to delete the group "${truncatedName}"? This action is irreversible and will remove the group from all contacts.`
     );
 
     if (!confirmed) return;
@@ -715,8 +721,11 @@ export default function ContactPanel({
           <div className="bg-base-100 border border-base-300 p-6 rounded-xl shadow-2xl relative w-96 max-w-full">
             <h3 className="text-lg font-bold mb-4">Delete Contact</h3>
             <p className="mb-6">
-              Are you sure you want to delete {selectedContact?.name}? This
-              action cannot be undone.
+              Are you sure you want to delete{" "}
+              {selectedContact?.name.length > 25
+                ? selectedContact?.name.slice(0, 25) + "…"
+                : selectedContact?.name}
+              ? This action cannot be undone.
             </p>
             <div className="flex justify-end space-x-3">
               <button

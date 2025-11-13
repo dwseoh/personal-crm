@@ -602,7 +602,7 @@ export default function Contacts() {
           {/* Contacts display - Block or List view */}
           {contacts.length > 0 ? (
             viewMode === "block" ? (
-              <div className="grid gap-6 grid-cols-[repeat(auto-fit,minmax(220px,1fr))]">
+              <div className="grid gap-6 grid-flow-row auto-rows-max grid-cols-[repeat(auto-fill,220px)] justify-start">
                 {filteredAndSortedContacts.map((contact, index) => (
                   <Profiles
                     key={

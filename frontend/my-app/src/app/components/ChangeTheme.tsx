@@ -6,7 +6,7 @@ import { useTheme } from "next-themes";
 export default function ChangeTheme() {
   const { theme, setTheme } = useTheme();
   return (
-    <div className="fixed top-7 right-4 z-10">
+    <div className="fixed top-7 right-4 z-[9999]">
         <button
           onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
           className="px-3 py-3 h-12 rounded-lg cursor-pointer bg-base-200 hover:bg-base-300 text-base-content transition-all duration-200 border border-base-300"

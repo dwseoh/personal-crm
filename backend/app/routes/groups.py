@@ -26,7 +26,7 @@ class editGroupRequest(BaseModel):
 
 @router.get("/")
 @limiter.limit(RateLimits.GROUPS)
-def list_groups(request: Request, user=Depends(get_current_user)):
+def list_groups(request: Request, user=Depends(get_current_user), include_contacts: bool = False):
     try:
         response = supabase_client.table("groups") \
             .select("*") \
@@ -39,6 +39,31 @@ def list_groups(request: Request, user=Depends(get_current_user)):
             group_data = dict(group)
             if "label_color" in group_data:
                 group_data["color"] = group_data["label_color"]
+            
+            # If include_contacts is True, fetch contacts for this group
+            if include_contacts:
+                try:
+                    # Get contact IDs from junction table
+                    contact_groups_response = supabase_client.table("contact_groups") \
+                        .select("contact_id") \
+                        .eq("group_id", group_data["id"]) \
+                        .execute()
+                    
+                    contact_ids = [cg["contact_id"] for cg in contact_groups_response.data] if contact_groups_response.data else []
+                    
+                    if contact_ids:
+                        # Get contacts
+                        contacts_response = supabase_client.table("contacts") \
+                            .select("*") \
+                            .eq("user_id", user.id) \
+                            .in_("id", contact_ids) \
+                            .execute()
+                        group_data["contacts"] = contacts_response.data
+                    else:
+                        group_data["contacts"] = []
+                except Exception:
+                    group_data["contacts"] = []
+            
             groups.append(group_data)
         
         return groups
@@ -121,6 +146,49 @@ def edit_group(group_id: str, edit_request: editGroupRequest, request: Request, 
         return group_data
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error updating group: {str(e)}")
+
+
+@router.get("/{group_id}/contacts")
+@limiter.limit(RateLimits.GROUPS)
+def get_group_contacts(group_id: str, request: Request, user=Depends(get_current_user)):
+    """Get all contacts that belong to a specific group"""
+    try:
+        # First verify the group belongs to the user
+        group_response = supabase_client.table("groups") \
+            .select("*") \
+            .eq("id", group_id) \
+            .eq("user_id", user.id) \
+            .execute()
+        
+        if not group_response.data:
+            raise HTTPException(status_code=404, detail="Group not found")
+        
+        # Get all contact IDs in this group from contact_groups junction table
+        contact_groups_response = supabase_client.table("contact_groups") \
+            .select("contact_id") \
+            .eq("group_id", group_id) \
+            .execute()
+        
+        if not contact_groups_response.data:
+            return []
+        
+        contact_ids = [cg["contact_id"] for cg in contact_groups_response.data]
+        
+        if not contact_ids:
+            return []
+        
+        # Get all contacts with these IDs that belong to the user
+        contacts_response = supabase_client.table("contacts") \
+            .select("*") \
+            .eq("user_id", user.id) \
+            .in_("id", contact_ids) \
+            .execute()
+        
+        return contacts_response.data
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching group contacts: {str(e)}")
 
 
 

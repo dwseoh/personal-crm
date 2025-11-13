@@ -46,7 +46,7 @@ export default function Sidebar() {
       <button
         id="sidebar-toggle"
         onClick={() => setIsOpen(!isOpen)}
-        className="fixed top-7 left-4 z-40 p-3 h-12 w-12 bg-base-200 hover:bg-base-300 text-base-content rounded-lg border border-base-300 transition-colors duration-200"
+        className="fixed top-7 left-4 z-[9999] p-3 h-12 w-12 bg-base-200 hover:bg-base-300 text-base-content rounded-lg border border-base-300 transition-colors duration-200"
       >
         {isOpen ? "✖" : "☰"}
       </button>
@@ -54,7 +54,7 @@ export default function Sidebar() {
       {/* Sidebar overlay */}
       <div
         ref={sidebarRef}
-        className={`fixed top-0 left-0 h-full bg-base-200 border-r border-base-300 text-base-content transition-all duration-300 z-30 shadow-lg ${
+        className={`fixed top-0 left-0 h-full bg-base-200 border-r border-base-300 text-base-content transition-all duration-300 z-[9998] shadow-lg ${
           isOpen ? "w-64" : "w-0"
         } overflow-hidden`}
       >
@@ -81,6 +81,12 @@ export default function Sidebar() {
             className="px-4 py-3 text-left hover:bg-base-300 rounded-lg transition-colors duration-200 text-base-content"
           >
             Contacts
+          </button>
+          <button
+            onClick={() => router.push("/groups")}
+            className="px-4 py-3 text-left hover:bg-base-300 rounded-lg transition-colors duration-200 text-base-content"
+          >
+            Groups
           </button>
           <button
             onClick={() => router.push("/profile")}

@@ -33,13 +33,31 @@ class editContactRequest(BaseModel):
 
 @router.get("/")
 @limiter.limit(RateLimits.CONTACTS)
-def list_contacts(request: Request, user=Depends(get_current_user)):
+def list_contacts(request: Request, user=Depends(get_current_user), include_groups: bool = False):
     try:
         response = supabase_client.table("contacts") \
             .select("*") \
             .eq("user_id", user.id) \
             .execute()
-        return response.data
+        
+        contacts = response.data
+        
+        # If include_groups is True, fetch groups for each contact
+        if include_groups:
+            for contact in contacts:
+                try:
+                    # Get group IDs from junction table
+                    contact_groups_response = supabase_client.table("contact_groups") \
+                        .select("group_id") \
+                        .eq("contact_id", contact["id"]) \
+                        .execute()
+                    
+                    group_ids = [cg["group_id"] for cg in contact_groups_response.data] if contact_groups_response.data else []
+                    contact["group_ids"] = group_ids
+                except Exception:
+                    contact["group_ids"] = []
+        
+        return contacts
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error fetching contacts: {str(e)}")
 

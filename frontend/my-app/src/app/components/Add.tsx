@@ -11,6 +11,9 @@ export default function Add({ right = 4 }: ChangeThemeProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [currentRole, setCurrentRole] = useState("");
+  const [importance,setImportance] = useState("");
+  const [company, setCompany] = useState("");
   const [phone, setPhone] = useState("");
   const [notes, setNotes] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -47,8 +50,12 @@ export default function Add({ right = 4 }: ChangeThemeProps) {
       setSuccess(true);
       setName("");
       setEmail("");
+      setCurrentRole("");
+      setCompany("");
+      setImportance("");
       setPhone("");
       setNotes("");
+      
       setIsOpen(false);
       router.refresh();
       window.location.reload();
@@ -118,6 +125,13 @@ export default function Add({ right = 4 }: ChangeThemeProps) {
           >
             {/* Name */}
             <div className="relative w-full">
+
+              {/* <div className="flex mb-1">
+                <span className="text-sm font-medium text-base-content/80">Name</span>
+              </div>
+               */}
+              
+              
               <input
                 type="text"
                 placeholder="Name"
@@ -160,6 +174,61 @@ export default function Add({ right = 4 }: ChangeThemeProps) {
                 {phone.length} / 20
               </span>
             </div>
+
+            {/* Current Role */}
+            <div className="relative w-full">
+              <input
+                type="text"
+                placeholder="Current Role"
+                value={currentRole}
+                maxLength={100}
+                onChange={(e) => setCurrentRole(e.target.value)}
+                className="border border-base-300 bg-base-200 text-base-content placeholder-base-content placeholder-opacity-70 px-4 py-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-primary pr-18"
+              />
+              <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-sm text-base-content opacity-70">
+                {currentRole.length} / 100
+              </span>
+            </div>
+
+            {/* Company */}
+            <div className="relative w-full">
+              <input
+                type="text"
+                placeholder="Company or affilrated organization"
+                value={company}
+                maxLength={100}
+                onChange={(e) => setCompany(e.target.value)}
+                className="border border-base-300 bg-base-200 text-base-content placeholder-base-content placeholder-opacity-70 px-4 py-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-primary pr-18"
+              />
+              <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-sm text-base-content opacity-70">
+                {company.length} / 100
+              </span>
+            </div>
+
+            {/* Importance */}
+            <div className="relative w-full">
+              <div className="flex justify-between mb-1">
+                <span className="text-sm font-medium text-base-content/80">Importance</span>
+                <span className="text-sm text-primary font-semibold">{importance}</span>
+              </div>
+
+              <input
+                type="range"
+                value={importance}
+                min="1"
+                max="5"
+                onChange={(e) => setImportance(e.target.value)}
+                className="
+                  range range-primary w-full h-3
+                  cursor-pointer
+                  bg-gradient-to-r from-primary/40 via-primary/70 to-primary
+                  rounded-xl
+                  accent-primary
+                "
+              />
+
+            </div>
+            
 
             {/* Notes */}
             <div className="w-full flex flex-col">

@@ -12,7 +12,7 @@ export default function ChangeTheme({ right = 4 }: ChangeThemeProps) {
   return (
     //isPanelOpen ? `${panelWidthPct}vw` : 0
 
-    <div className="fixed top-7 z-10" style={{ right: `${right}vw` }}>
+    <div className="fixed top-7 z-30" style={{ right: `${right}vw` }}>
       <button
         onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
         className="px-3 py-3 h-12 rounded-lg cursor-pointer bg-base-200 hover:bg-base-300 text-base-content transition-all duration-200 border border-base-300"

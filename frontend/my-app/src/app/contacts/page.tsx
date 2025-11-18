@@ -116,7 +116,16 @@ export default function Contacts() {
         const parsed = JSON.parse(cachedContacts);
         if (Array.isArray(parsed) && parsed.length > 0) {
           setContacts(parsed);
-          loadContactGroups(parsed); // Load groups for cached contacts
+
+          // Extract group IDs from cached contacts
+          const groupsMap: { [contactId: string]: string[] } = {};
+          parsed.forEach((contact: any) => {
+            if (contact.id && contact.group_ids) {
+              groupsMap[contact.id] = contact.group_ids;
+            }
+          });
+          setContactGroups(groupsMap);
+
           setHasInitialLoad(true);
         }
       } catch (error) {
@@ -141,12 +150,15 @@ export default function Contacts() {
       }
 
       try {
-        const res = await fetch("http://127.0.0.1:8000/contacts/", {
-          method: "GET",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
+        const res = await fetch(
+          "http://127.0.0.1:8000/contacts/?include_groups=true",
+          {
+            method: "GET",
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
 
         if (!res.ok) {
           const errData = await res.json();
@@ -166,8 +178,14 @@ export default function Contacts() {
 
         setContacts(contactsData);
 
-        // Load groups for each contact
-        await loadContactGroups(contactsData);
+        // Extract group IDs from the contacts data
+        const groupsMap: { [contactId: string]: string[] } = {};
+        contactsData.forEach((contact: any) => {
+          if (contact.id && contact.group_ids) {
+            groupsMap[contact.id] = contact.group_ids;
+          }
+        });
+        setContactGroups(groupsMap);
 
         // Cache the contacts for next time
         localStorage.setItem("cached_contacts", JSON.stringify(contactsData));
@@ -265,7 +283,7 @@ export default function Contacts() {
 
     setIsRefreshing(true);
 
-    fetch("http://127.0.0.1:8000/contacts/", {
+    fetch("http://127.0.0.1:8000/contacts/?include_groups=true", {
       method: "GET",
       headers: {
         Authorization: `Bearer ${token}`,
@@ -281,7 +299,16 @@ export default function Contacts() {
       .then(async (data) => {
         const contactsData = Array.isArray(data) ? data : [];
         setContacts(contactsData);
-        await loadContactGroups(contactsData);
+
+        // Extract group IDs from the contacts data
+        const groupsMap: { [contactId: string]: string[] } = {};
+        contactsData.forEach((contact: any) => {
+          if (contact.id && contact.group_ids) {
+            groupsMap[contact.id] = contact.group_ids;
+          }
+        });
+        setContactGroups(groupsMap);
+
         localStorage.setItem("cached_contacts", JSON.stringify(contactsData));
       })
       .catch((err) => console.error("Refresh failed:", err))
@@ -374,10 +401,10 @@ export default function Contacts() {
         marginRight: isPanelOpen ? `${panelWidthPct}vw` : 0,
         transition: !hasOpenedOnce ? "margin-right 0.3s" : "none",
       }}
-      className="min-h-screen transition-all duration-300"
+      className="min-h-screen bg-base-100"
     >
-      {/* Top Bar with Flexbox Layout */}
-      <div className="bg-base-200 border-b border-base-300 py-6">
+      {/* Top Bar with Flexbox Layout - Sticky */}
+      <div className="sticky top-0 z-20 bg-base-200 border-b border-base-300 py-6">
         <div className="max-w-7xl flex items-center space-between">
           <div className="w-20"></div>
 

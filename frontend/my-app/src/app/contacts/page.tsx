@@ -369,14 +369,20 @@ export default function Contacts() {
   }
 
   return (
-    <div className="min-h-screen bg-base-100">
+    <div
+      style={{
+        marginRight: isPanelOpen ? `${panelWidthPct}vw` : 0,
+        transition: !hasOpenedOnce ? "margin-right 0.3s" : "none",
+      }}
+      className="min-h-screen transition-all duration-300"
+    >
       {/* Top Bar with Flexbox Layout */}
       <div className="bg-base-200 border-b border-base-300 py-6">
-        <div className="max-w-7xl mx-auto flex items-center space-between">
-          <div className="w-12"></div>
+        <div className="max-w-7xl flex items-center space-between">
+          <div className="w-20"></div>
 
           {/* Left side - Title */}
-          <div className="flex-shrink-0 ">
+          <div className="flex-shrink-0">
             <h1 className="text-3xl font-bold text-base-content">
               All Contacts
             </h1>
@@ -386,7 +392,7 @@ export default function Contacts() {
           </div>
 
           {/* Center - Search Bar */}
-          <div className="flex-1 max-w-md pl-12 pr-12">
+          <div className="flex-1 max-w-md pl-12 pr-6">
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                 <svg
@@ -493,18 +499,12 @@ export default function Contacts() {
             </button> */}
           </div>
 
-          <div className="w-12"></div>
+          <div className="w-24"></div>
         </div>
       </div>
 
       {/* Main content area - Only this part shrinks */}
-      <div
-        className={`transition-all duration-300`}
-        style={{
-          marginRight: isPanelOpen ? `${panelWidthPct}vw` : 0,
-          transition: !hasOpenedOnce ? "margin-right 0.3s" : "none",
-        }}
-      >
+      <div>
         <div className="max-w-7xl mx-auto px-8 py-8">
           {/* Filter and Sort Controls */}
           <div className="mb-6 flex flex-wrap gap-4 items-center">
@@ -908,13 +908,13 @@ export default function Contacts() {
         </div>
       )}
 
-      <Add />
+      <Add right={isPanelOpen ? panelWidthPct + 2 : 2} />
 
       {/* Temporary boxes to prevent overlap when zooming */}
 
       <Sidebar />
 
-      <ChangeTheme />
+      <ChangeTheme right={isPanelOpen ? panelWidthPct + 2 : 2} />
     </div>
   );
 }

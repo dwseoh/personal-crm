@@ -2,7 +2,11 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
-export default function Add() {
+interface ChangeThemeProps {
+  right?: number; // can be a number or string with units
+}
+
+export default function Add({ right = 4 }: ChangeThemeProps) {
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const [name, setName] = useState("");
@@ -59,7 +63,8 @@ export default function Add() {
     <>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="fixed bottom-6 right-6 w-14 h-14 bg-accent text-primary-content hover:bg-opacity-90 rounded-full shadow-lg z-40 flex items-center justify-center transition-all duration-200 hover:scale-105"
+        style={{ right: `${right}vw` }}
+        className="fixed bottom-6 w-14 h-14 bg-accent text-primary-content hover:bg-opacity-90 rounded-full shadow-lg z-40 flex items-center justify-center hover:scale-105"
       >
         <svg
           className="w-6 h-6"
@@ -77,7 +82,7 @@ export default function Add() {
       </button>
 
       <div
-        className={`fixed inset-0 bg-base-100 bg-opacity-50 flex items-center justify-center z-40 ${
+        className={`fixed inset-0 bg-base-100 bg-opacity-50 flex items-center justify-center z-60 ${
           isOpen ? "block" : "hidden"
         }`}
       >

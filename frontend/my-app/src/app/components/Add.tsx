@@ -11,8 +11,11 @@ export default function Add({ right = 4 }: ChangeThemeProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-  const [currentRole, setCurrentRole] = useState("");
-  const [importance,setImportance] = useState("");
+  const [current_role, setCurrentRole] = useState("");
+  const [location,setLocation] = useState("");
+  const [importance,setImportance] = useState(1);
+
+
   const [company, setCompany] = useState("");
   const [phone, setPhone] = useState("");
   const [notes, setNotes] = useState("");
@@ -38,7 +41,7 @@ export default function Add({ right = 4 }: ChangeThemeProps) {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ name, email, phone, notes }),
+        body: JSON.stringify({ name, email, phone, notes, current_role, importance, company, location }),
       });
 
       if (!res.ok) {
@@ -52,9 +55,10 @@ export default function Add({ right = 4 }: ChangeThemeProps) {
       setEmail("");
       setCurrentRole("");
       setCompany("");
-      setImportance("");
+      setImportance(1);
       setPhone("");
       setNotes("");
+      setLocation("");
       
       setIsOpen(false);
       router.refresh();
@@ -160,6 +164,8 @@ export default function Add({ right = 4 }: ChangeThemeProps) {
               </span>
             </div>
 
+            {/* To do: ADD GROUP OPTION */}
+
             {/* Phone */}
             <div className="relative w-full">
               <input
@@ -180,13 +186,13 @@ export default function Add({ right = 4 }: ChangeThemeProps) {
               <input
                 type="text"
                 placeholder="Current Role"
-                value={currentRole}
+                value={current_role}
                 maxLength={100}
                 onChange={(e) => setCurrentRole(e.target.value)}
                 className="border border-base-300 bg-base-200 text-base-content placeholder-base-content placeholder-opacity-70 px-4 py-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-primary pr-18"
               />
               <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-sm text-base-content opacity-70">
-                {currentRole.length} / 100
+                {current_role.length} / 100
               </span>
             </div>
 
@@ -205,19 +211,35 @@ export default function Add({ right = 4 }: ChangeThemeProps) {
               </span>
             </div>
 
+            {/* Location */}
+            <div className="relative w-full">
+              <input
+                type="text"
+                placeholder="Location"
+                value={location}
+                maxLength={100}
+                onChange={(e) => setLocation(e.target.value)}
+                className="border border-base-300 bg-base-200 text-base-content placeholder-base-content placeholder-opacity-70 px-4 py-2 rounded w-full focus:outline-none focus:ring-2 focus:ring-primary pr-18"
+              />
+              <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-sm text-base-content opacity-70">
+                {location.length} / 100
+              </span>
+            </div>
+
             {/* Importance */}
             <div className="relative w-full">
               <div className="flex justify-between mb-1">
                 <span className="text-sm font-medium text-base-content/80">Importance</span>
                 <span className="text-sm text-primary font-semibold">{importance}</span>
               </div>
+              <p className = "text-sm">5 is the most important</p>
 
               <input
                 type="range"
                 value={importance}
                 min="1"
                 max="5"
-                onChange={(e) => setImportance(e.target.value)}
+                onChange={(e) => setImportance(Number(e.target.value))}
                 className="
                   range range-primary w-full h-3
                   cursor-pointer

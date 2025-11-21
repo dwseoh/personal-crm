@@ -4,19 +4,12 @@ import Sidebar from "../components/Sidebar";
 import Add from "../components/Add";
 import ChangeTheme from "../components/ChangeTheme";
 import ContactPanel from "../components/ContactPanel";
+import { Contact } from "@/types/contact";
 
 import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 
 export default function Contacts() {
-  interface Contact {
-    id?: string;
-    name: string;
-    email: string;
-    phone: string;
-    notes: string;
-    created_at?: string;
-  }
   const router = useRouter();
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [contacts, setContacts] = useState<Contact[]>([]);
@@ -231,7 +224,7 @@ export default function Contacts() {
     loadGroups();
   }, []);
 
-  // Load groups for contacts
+/*   // Load groups for contacts
   const loadContactGroups = async (contactsData: Contact[]) => {
     const token = localStorage.getItem("token");
     if (!token) return;
@@ -254,9 +247,11 @@ export default function Contacts() {
               if (res.ok) {
                 const groups = await res.json();
                 groupsMap[contact.id] = groups.map((g: any) => g.id);
+
               } else {
                 groupsMap[contact.id] = [];
               }
+              
             } catch (error) {
               console.error(
                 `Failed to load groups for contact ${contact.id}:`,
@@ -274,7 +269,7 @@ export default function Contacts() {
     } finally {
       setLoadingGroups(false);
     }
-  };
+  }; */
 
   // Refresh function for manual refresh
   const refreshContacts = () => {
@@ -639,7 +634,11 @@ export default function Contacts() {
                     name={contact.name}
                     email={contact.email}
                     phone={contact.phone}
-                    notes={contact.notes}
+                    notes={contact.notes ?? ""}
+                    current_role={contact.current_role ?? ""}
+                    location={contact.location ?? ""}
+                    importance={contact.importance ?? 1}
+                    company = {contact.company ?? ""}
                     onOpenPanel={handleOpenPanel}
                   />
                 ))}

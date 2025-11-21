@@ -3,13 +3,7 @@ import { useState, useEffect, useRef } from "react";
 import GroupCreator from "./GroupCreator";
 import { useRouter } from "next/navigation";
 
-interface Contact {
-  id?: string;
-  name: string;
-  email: string;
-  phone: string;
-  notes: string;
-}
+import { Contact } from "@/types/contact";
 
 interface Group {
   id: string;
@@ -45,6 +39,10 @@ export default function ContactPanel({
     email: "",
     phone: "",
     notes: "",
+    current_role: "",
+    company: "",
+    location: "",
+    importance: 1
   });
 
   // Group-related state
@@ -357,7 +355,7 @@ export default function ContactPanel({
               <div className="w-20 h-20 bg-primary text-primary-content rounded-full flex flex-shrink-0 items-center justify-center text-2xl font-bold">
                 {selectedContact.name.charAt(0).toUpperCase()}
               </div>
-              <div className="flex-1">
+              <div className="flex-1 min-w-0">
                 <h3
                   style={{
                     maxWidth:
@@ -367,9 +365,23 @@ export default function ContactPanel({
                 >
                   {selectedContact.name}
                 </h3>
-                <p className="text-base-content opacity-70">
-                  Contact Information
-                </p>
+                <div 
+                  className="text-base-content opacity-70 space-y-1"
+                  style={{
+                    maxWidth:
+                      (panelWidthPct / 100) * window.innerWidth - 180 - 112, // same as name
+                  }}
+                >
+                  <p className="truncate">{selectedContact.current_role || "No role specified"}</p>
+                  {selectedContact.company && (
+                    <div className="flex items-center space-x-1 min-w-0">
+                      <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                      </svg>
+                      <span className="truncate min-w-0">{selectedContact.company}</span>
+                    </div>
+                  )}
+                </div>
               </div>
 
               {/* Edit/Save buttons */}
@@ -545,6 +557,163 @@ export default function ContactPanel({
                 )}
               </div>
 
+              {/* Importance Slider */}
+              <div>
+                <label className="block text-sm font-medium text-base-content opacity-70 mb-2">
+                  Importance
+                </label>
+                {isEditing ? (
+                  <div className="space-y-3">
+                    <input
+                      type="range"
+                      min="1"
+                      max="5"
+                      value={editForm.importance || 1}
+                      onChange={(e) =>
+                        setEditForm({ ...editForm, importance: parseInt(e.target.value) })
+                      }
+                      className="w-full h-2 bg-base-300 rounded-lg appearance-none cursor-pointer accent-primary"
+                    />
+                    <div className="flex justify-between text-xs text-base-content opacity-70">
+                      <span className={editForm.importance === 1 ? "font-bold text-base-content" : ""}>1 - Low</span>
+                      <span className={editForm.importance === 2 ? "font-bold text-base-content" : ""}>2</span>
+                      <span className={editForm.importance === 3 ? "font-bold text-base-content" : ""}>3 - Medium</span>
+                      <span className={editForm.importance === 4 ? "font-bold text-base-content" : ""}>4</span>
+                      <span className={editForm.importance === 5 ? "font-bold text-base-content" : ""}>5 - High</span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    <div className="w-full p-3 bg-base-100 border border-base-300 rounded-lg text-base-content cursor-default">
+                      {selectedContact.importance ? (
+                        <div className="flex items-center space-x-2">
+                          <span className="font-semibold">{selectedContact.importance}</span>
+                          <span>-</span>
+                          <span>
+                            {selectedContact.importance === 1 && "Low"}
+                            {selectedContact.importance === 2 && "Below Average"}
+                            {selectedContact.importance === 3 && "Medium"}
+                            {selectedContact.importance === 4 && "Above Average"}
+                            {selectedContact.importance === 5 && "High"}
+                          </span>
+                        </div>
+                      ) : (
+                        "1 - Low"
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Company Field with Icon */}
+              <div className="relative">
+                <label className="block text-sm font-medium text-base-content opacity-70 mb-2">
+                  Company
+                </label>
+                {isEditing ? (
+                  <div className="relative">
+                    <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-base-content opacity-50">
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                      </svg>
+                    </div>
+                    <input
+                      type="text"
+                      value={editForm.company || ""}
+                      onChange={(e) =>
+                        setEditForm({ ...editForm, company: e.target.value })
+                      }
+                      maxLength={100}
+                      className="w-full pl-11 pr-18 p-3 bg-base-100 border border-base-300 rounded-lg text-base-content focus:outline-none focus:ring-2 focus:ring-primary"
+                      placeholder="e.g. Acme Corp"
+                    />
+                    <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-sm text-base-content opacity-70">
+                      {(editForm.company?.length ?? 0)} / 100
+                    </span>
+                  </div>
+                ) : (
+                  <div className="relative">
+                    <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-base-content opacity-50">
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                      </svg>
+                    </div>
+                    <div 
+                      className="w-full pl-11 p-3 bg-base-100 border border-base-300 rounded-lg text-base-content cursor-default"
+                      style={{ userSelect: 'none', WebkitUserSelect: 'none' }}
+                    >
+                      {selectedContact.company || "No company specified"}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Current Role Field */}
+              <div className="relative">
+                <label className="block text-sm font-medium text-base-content opacity-70 mb-2">
+                  Current Role
+                </label>
+                {isEditing ? (
+                  <input
+                    type="text"
+                    value={editForm.current_role || ""}
+                    onChange={(e) =>
+                      setEditForm({ ...editForm, current_role: e.target.value })
+                    }
+                    maxLength={100}
+                    className="w-full p-3 pr-18 bg-base-100 border border-base-300 rounded-lg text-base-content focus:outline-none focus:ring-2 focus:ring-primary"
+                    placeholder="e.g. Software Engineer"
+                  />
+                ) : (
+                  <div 
+                    className="w-full p-3 bg-base-100 border border-base-300 rounded-lg text-base-content cursor-default"
+                    style={{ userSelect: 'none', WebkitUserSelect: 'none' }}
+                  >
+                    {selectedContact.current_role || "No role specified"}
+                  </div>
+                )}
+                {isEditing && (
+                  <span className="absolute right-3 top-2/3 transform -translate-y-1/2 text-sm text-base-content opacity-70">
+                    {(editForm.current_role?.length ?? 0)} / 100
+                  </span>
+                )}
+              </div>
+
+              
+
+              {/* Location Field */}
+              <div className="relative">
+                <label className="block text-sm font-medium text-base-content opacity-70 mb-2">
+                  Location
+                </label>
+                {isEditing ? (
+                  <input
+                    type="text"
+                    value={editForm.location || ""}
+                    onChange={(e) =>
+                      setEditForm({ ...editForm, location: e.target.value })
+                    }
+                    maxLength={100}
+                    className="w-full p-3 pr-18 bg-base-100 border border-base-300 rounded-lg text-base-content focus:outline-none focus:ring-2 focus:ring-primary"
+                    placeholder="e.g. San Francisco, CA"
+                  />
+                ) : (
+                  <div 
+                    className="w-full p-3 bg-base-100 border border-base-300 rounded-lg text-base-content cursor-default"
+                    style={{ userSelect: 'none', WebkitUserSelect: 'none' }}
+                  >
+                    {selectedContact.location || "No location specified"}
+                  </div>
+                )}
+                {isEditing && (
+                  <span className="absolute right-3 top-2/3 transform -translate-y-1/2 text-sm text-base-content opacity-70">
+                    {(editForm.location?.length ?? 0)} / 100
+                  </span>
+                )}
+              </div>
+
+              
+
               {/* Notes Field */}
               <div className="flex flex-col relative">
                 <label className="block text-sm font-medium text-base-content opacity-70 mb-2">
@@ -571,10 +740,12 @@ export default function ContactPanel({
                 )}
                 {isEditing && (
                   <span className="self-end text-sm text-base-content opacity-70 mt-1">
-                    {editForm.notes.length} / 500
+                    {(editForm.notes?.length ?? 0)} / 500
                   </span>
                 )}
               </div>
+
+              
 
               {/* Groups Section */}
               <div>

@@ -15,17 +15,23 @@ class ContactRequest(BaseModel):
     email: str | None = None
     phone: str | None = None
     notes: str | None = None
+    current_role: str | None = None
+    importance: int | None = 1
+    company: str | None = None
+    location: str | None = None
     groups: list[str] = Field(default_factory=list)
-# need to change frontend so that it calls the post method differently 
-# list of group_id's 
+
 
 class editContactRequest(BaseModel):
     name: str | None = None
     email: str | None = None
     phone: str | None = None
     notes: str | None = None
+    current_role: str | None = None
+    importance: int | None = None
+    company: str | None = None
+    location: str | None = None
     groups: list[str] | None = None
-
 
 # ---------------------------
 # Routes
@@ -76,7 +82,11 @@ def create_contact(contact_request: ContactRequest, request: Request, user=Depen
             "name": contact_request.name,
             "email": contact_request.email,
             "phone": contact_request.phone,
-            "notes": contact_request.notes
+            "notes": contact_request.notes,
+            "current_role": contact_request.current_role,
+            "importance":contact_request.importance,
+            "company":contact_request.company,
+            "location":contact_request.location
         }).execute()
 
         if not contact_response.data:
@@ -145,6 +155,7 @@ def delete_contact(contact_id: str, request: Request, user=Depends(get_current_u
         raise HTTPException(status_code=500, detail=f"Error deleting contact: {str(e)}")
 
 
+# need to edit this to reflect new schema changes 
 @router.patch("/{contact_id}")
 @limiter.limit(RateLimits.CONTACTS)
 def edit_contact(contact_id: str, edit_request: editContactRequest, request: Request, user=Depends(get_current_user)):

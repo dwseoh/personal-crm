@@ -4,20 +4,13 @@ import { useRouter } from "next/navigation";
 import Sidebar from "../components/Sidebar";
 import ChangeTheme from "../components/ChangeTheme";
 import GroupCreator from "../components/GroupCreator";
+import { Contact } from "@/types/contact";
 
 interface Group {
   id: string;
   name: string;
   color: string;
   user_id: string;
-}
-
-interface Contact {
-  id: string;
-  name: string;
-  email: string;
-  phone: string;
-  notes: string;
 }
 
 interface GroupWithContacts extends Group {

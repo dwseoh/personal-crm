@@ -1,4 +1,4 @@
-# personal-crm# Personal CRM Project - Complete README
+# Personal CRM Project - Complete README
 
 ## 📋 Project Overview
 

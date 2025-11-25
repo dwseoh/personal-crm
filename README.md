@@ -447,30 +447,3 @@ curl -X GET "http://localhost:8000/contacts" \
 ## 📝 License
 
 This project is licensed under the MIT License.
-
----
-
-## 📞 Support
-
-For issues or questions:
-1. Check existing GitHub issues
-2. Create a new issue with detailed description
-3. Include error logs and reproduction steps
-4. Tag appropriate labels (bug, feature, documentation)
-
----
-
-## 🎯 Roadmap
-
-- [ ] Mobile app (React Native)
-- [ ] Advanced analytics and forecasting
-- [ ] Contact import/export (CSV, vCard)
-- [ ] Integration with email providers
-- [ ] Calendar integration
-- [ ] Contact reminders and follow-ups
-- [ ] Team collaboration features
-- [ ] Zapier integration
-
----
-
-**Happy CRMing! 🚀**

@@ -25,6 +25,25 @@ class editUserPasswordRequest(BaseModel):
 # Routes
 # ---------------------------
 
+@router.get("/")
+@limiter.limit(RateLimits.USERS)
+def get_user(request: Request, user=Depends(get_current_user)):
+    try:
+        response = supabase_client.table("users") \
+            .select("*") \
+            .eq("id", user.id) \
+            .execute()
+
+        if not response.data or len(response.data) == 0:
+            raise HTTPException(status_code=404, detail="User not found")
+
+        return response.data[0]
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error fetching user: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error fetching user: {str(e)}")
+
 @router.patch("/edit/info")
 @limiter.limit(RateLimits.USERS)
 def edit_contact (edit_request: editUserInfoRequest, request: Request, user=Depends(get_current_user)):
@@ -41,7 +60,7 @@ def edit_contact (edit_request: editUserInfoRequest, request: Request, user=Depe
         
         response = supabase_client.table("users") \
             .update(update_data) \
-            .eq("user_id", user.id) \
+            .eq("id", user.id) \
             .execute()
 
         if not response.data:

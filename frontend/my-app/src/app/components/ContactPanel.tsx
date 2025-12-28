@@ -2,6 +2,10 @@
 import { useState, useEffect, useRef } from "react";
 import GroupCreator from "./GroupCreator";
 import { useRouter } from "next/navigation";
+import InteractionTimeline from "./InteractionTimeline";
+import InteractionModal from "./InteractionModal";
+import SimilarContactsSection from "./SimilarContactsSection";
+import type { Interaction } from "@/types/interactions";
 
 import { Contact } from "@/types/contact";
 
@@ -54,6 +58,11 @@ export default function ContactPanel({
   const [panelWidthPct, setPanelWidthPct] = useState(26); // 25% of viewport
   const isResizing = useRef(false);
 
+  // Interactions state
+  const [interactions, setInteractions] = useState<Interaction[]>([]);
+  const [isInteractionModalOpen, setIsInteractionModalOpen] = useState(false);
+  const [editingInteraction, setEditingInteraction] = useState<Interaction | null>(null);
+
   const onMouseDown = () => {
     isResizing.current = true;
     document.body.style.cursor = "ew-resize";
@@ -95,6 +104,7 @@ export default function ContactPanel({
     if (selectedContact?.id) {
       loadAvailableGroups();
       loadContactGroups(selectedContact.id);
+      loadInteractions(selectedContact.id);
     }
   }, [selectedContact]);
 
@@ -181,6 +191,78 @@ export default function ContactPanel({
     } catch (error) {
       console.error("Failed to load contact groups:", error);
       setContactGroups([]);
+    }
+  };
+
+  const loadInteractions = async (contactId: string) => {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+
+    try {
+      const res = await fetch(
+        `http://127.0.0.1:8000/interactions/${contactId}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      if (res.ok) {
+        const data = await res.json();
+        setInteractions(data);
+      }
+    } catch (error) {
+      console.error("Failed to load interactions:", error);
+      setInteractions([]);
+    }
+  };
+
+  const handleSaveInteraction = async (interaction: Omit<Interaction, "id">) => {
+    const token = localStorage.getItem("token");
+    if (!token || !selectedContact?.id) return;
+
+    const method = editingInteraction ? "PATCH" : "POST";
+    const url = editingInteraction
+      ? `http://127.0.0.1:8000/interactions/${editingInteraction.id}`
+      : "http://127.0.0.1:8000/interactions/";
+
+    const res = await fetch(url, {
+      method,
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(interaction),
+    });
+
+    if (res.ok) {
+      await loadInteractions(selectedContact.id);
+      setEditingInteraction(null);
+    } else {
+      throw new Error("Failed to save interaction");
+    }
+  };
+
+  const handleDeleteInteraction = async (interactionId: string) => {
+    const token = localStorage.getItem("token");
+    if (!token || !selectedContact?.id) return;
+
+    const res = await fetch(`http://127.0.0.1:8000/interactions/${interactionId}`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    if (res.ok) {
+      await loadInteractions(selectedContact.id);
+    }
+  };
+
+  const handleEditInteraction = (interaction: Interaction) => {
+    setEditingInteraction(interaction);
+    setIsInteractionModalOpen(true);
+  };
+
+  const handleOpenInteractionsTab = () => {
+    if (selectedContact?.id) {
+      window.open(`/interactions?contactId=${selectedContact.id}`, "_blank");
     }
   };
 
@@ -313,9 +395,8 @@ export default function ContactPanel({
     <>
       <div
         style={{ width: `${panelWidthPct}vw` }} // vw = viewport width
-        className={`fixed top-0 right-0 h-full bg-base-200 border-l border-base-300 shadow-xl transform transition-transform duration-300 z-50 ${
-          isPanelOpen ? "translate-x-0" : "translate-x-full"
-        }`}
+        className={`fixed top-0 right-0 h-full bg-base-200 border-l border-base-300 shadow-xl transform transition-transform duration-300 z-50 ${isPanelOpen ? "translate-x-0" : "translate-x-full"
+          }`}
       >
         {/* Resizer */}
         <div
@@ -365,7 +446,7 @@ export default function ContactPanel({
                 >
                   {selectedContact.name}
                 </h3>
-                <div 
+                <div
                   className="text-base-content opacity-70 space-y-1"
                   style={{
                     maxWidth:
@@ -481,7 +562,7 @@ export default function ContactPanel({
                     placeholder="Enter name"
                   />
                 ) : (
-                  <div 
+                  <div
                     className="w-full pr-18 p-3 bg-base-100 border border-base-300 rounded-lg text-base-content cursor-default"
                     style={{ userSelect: 'none', WebkitUserSelect: 'none' }}
                   >
@@ -512,7 +593,7 @@ export default function ContactPanel({
                     placeholder="Enter email address"
                   />
                 ) : (
-                  <div 
+                  <div
                     className="w-full p-3 pr-18 bg-base-100 border border-base-300 rounded-lg text-base-content cursor-default"
                     style={{ userSelect: 'none', WebkitUserSelect: 'none' }}
                   >
@@ -543,7 +624,7 @@ export default function ContactPanel({
                     placeholder="Enter phone number"
                   />
                 ) : (
-                  <div 
+                  <div
                     className="w-full p-3 pr-16 bg-base-100 border border-base-300 rounded-lg text-base-content cursor-default"
                     style={{ userSelect: 'none', WebkitUserSelect: 'none' }}
                   >
@@ -638,7 +719,7 @@ export default function ContactPanel({
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                       </svg>
                     </div>
-                    <div 
+                    <div
                       className="w-full pl-11 p-3 bg-base-100 border border-base-300 rounded-lg text-base-content cursor-default"
                       style={{ userSelect: 'none', WebkitUserSelect: 'none' }}
                     >
@@ -665,7 +746,7 @@ export default function ContactPanel({
                     placeholder="e.g. Software Engineer"
                   />
                 ) : (
-                  <div 
+                  <div
                     className="w-full p-3 bg-base-100 border border-base-300 rounded-lg text-base-content cursor-default"
                     style={{ userSelect: 'none', WebkitUserSelect: 'none' }}
                   >
@@ -679,7 +760,7 @@ export default function ContactPanel({
                 )}
               </div>
 
-              
+
 
               {/* Location Field */}
               <div className="relative">
@@ -698,7 +779,7 @@ export default function ContactPanel({
                     placeholder="e.g. San Francisco, CA"
                   />
                 ) : (
-                  <div 
+                  <div
                     className="w-full p-3 bg-base-100 border border-base-300 rounded-lg text-base-content cursor-default"
                     style={{ userSelect: 'none', WebkitUserSelect: 'none' }}
                   >
@@ -712,7 +793,7 @@ export default function ContactPanel({
                 )}
               </div>
 
-              
+
 
               {/* Notes Field */}
               <div className="flex flex-col relative">
@@ -731,7 +812,7 @@ export default function ContactPanel({
                     placeholder="Enter notes (optional)"
                   />
                 ) : (
-                  <div 
+                  <div
                     className="w-full p-3 bg-base-100 border border-base-300 rounded-lg text-base-content cursor-default min-h-[112px]"
                     style={{ userSelect: 'none', WebkitUserSelect: 'none' }}
                   >
@@ -745,7 +826,7 @@ export default function ContactPanel({
                 )}
               </div>
 
-              
+
 
               {/* Groups Section */}
               <div>
@@ -846,11 +927,10 @@ export default function ContactPanel({
                               </button>
                               <button
                                 onClick={() => toggleGroupSelection(group.id)}
-                                className={`inline-flex items-center pl-6 pr-3 py-1 rounded-full text-sm font-medium transition-all max-w-32 ${
-                                  selectedGroups.includes(group.id)
-                                    ? "text-white ring-2 ring-base-content"
-                                    : "text-white opacity-50 hover:opacity-75"
-                                }`}
+                                className={`inline-flex items-center pl-6 pr-3 py-1 rounded-full text-sm font-medium transition-all max-w-32 ${selectedGroups.includes(group.id)
+                                  ? "text-white ring-2 ring-base-content"
+                                  : "text-white opacity-50 hover:opacity-75"
+                                  }`}
                                 style={{ backgroundColor: group.color }}
                                 title={group.name}
                               >
@@ -880,6 +960,52 @@ export default function ContactPanel({
                     </div>
                   )}
                 </div>
+
+                {/* Interactions Section */}
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <label className="block text-sm font-medium text-base-content opacity-70">
+                      Interactions
+                    </label>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => setIsInteractionModalOpen(true)}
+                        className="flex items-center space-x-1 px-3 py-2 rounded-lg text-sm font-medium transition-all bg-primary/10 text-primary hover:bg-primary hover:text-primary-content"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                        </svg>
+                        <span>Add</span>
+                      </button>
+                      <button
+                        onClick={handleOpenInteractionsTab}
+                        className="flex items-center space-x-1 px-3 py-2 rounded-lg text-sm font-medium transition-all bg-base-300 text-base-content hover:bg-base-100"
+                        title="Open in new tab"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                        </svg>
+                        <span>Open</span>
+                      </button>
+                    </div>
+                  </div>
+                  <div className="bg-base-100 border border-base-300 rounded-lg p-3">
+                    <InteractionTimeline
+                      interactions={interactions}
+                      onEdit={handleEditInteraction}
+                      onDelete={handleDeleteInteraction}
+                      compact={true}
+                    />
+                  </div>
+                </div>
+
+                {/* Similar Contacts Section */}
+                {selectedContact?.id && (
+                  <SimilarContactsSection
+                    contactId={selectedContact.id}
+                    contactName={selectedContact.name}
+                  />
+                )}
               </div>
             </div>
           </div>
@@ -923,6 +1049,21 @@ export default function ContactPanel({
         onClose={() => setShowGroupCreator(false)}
         onGroupCreated={handleGroupCreated}
       />
+
+      {/* Interaction Modal */}
+      {selectedContact?.id && (
+        <InteractionModal
+          isOpen={isInteractionModalOpen}
+          onClose={() => {
+            setIsInteractionModalOpen(false);
+            setEditingInteraction(null);
+          }}
+          onSave={handleSaveInteraction}
+          contactId={selectedContact.id}
+          contactName={selectedContact.name}
+          editingInteraction={editingInteraction}
+        />
+      )}
     </>
   );
 }

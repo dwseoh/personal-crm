@@ -6,6 +6,7 @@ from app.routes.user import router as user_router
 from app.routes.groups import router as groups_router
 from app.routes.dashboard import router as dashboard_router
 from app.routes.interactions import router as interactions_router
+from app.routes.analytics import router as analytics_router
 
 #app.db
 # .database
@@ -29,6 +30,7 @@ app.include_router(groups_router)
 app.include_router(contacts_router)
 app.include_router(dashboard_router)
 app.include_router(interactions_router)
+app.include_router(analytics_router)
 
 
 @app.get("/")

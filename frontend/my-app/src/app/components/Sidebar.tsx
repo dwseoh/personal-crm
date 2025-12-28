@@ -54,9 +54,8 @@ export default function Sidebar() {
       {/* Sidebar overlay */}
       <div
         ref={sidebarRef}
-        className={`fixed top-0 left-0 h-full bg-base-200 border-r border-base-300 text-base-content transition-all duration-300 z-45 shadow-lg ${
-          isOpen ? "w-64" : "w-0"
-        } overflow-hidden`}
+        className={`fixed top-0 left-0 h-full bg-base-200 border-r border-base-300 text-base-content transition-all duration-300 z-45 shadow-lg ${isOpen ? "w-64" : "w-0"
+          } overflow-hidden`}
       >
         <div className="mt-20 flex flex-col space-y-1x p-4">
           {/* User info section */}
@@ -81,6 +80,12 @@ export default function Sidebar() {
             className="px-4 py-3 text-left hover:bg-base-300 rounded-lg transition-colors duration-200 text-base-content"
           >
             Contacts
+          </button>
+          <button
+            onClick={() => router.push("/interactions")}
+            className="px-4 py-3 text-left hover:bg-base-300 rounded-lg transition-colors duration-200 text-base-content"
+          >
+            💬 Interactions
           </button>
           <button
             onClick={() => router.push("/groups")}

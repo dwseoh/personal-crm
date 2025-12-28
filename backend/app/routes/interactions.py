@@ -1,37 +1,81 @@
 from fastapi import APIRouter, Depends, HTTPException, Request
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, validator
+from typing import Literal
 from app.core.database import supabase_client
 from app.core.rate_limiter import limiter, RateLimits
 from app.auth import get_current_user
+from datetime import datetime
 
 router = APIRouter(prefix="/interactions", tags=["interactions"])
 
 """
-id              UUID / int (PK)
-user_id
-contact_id      FK → contacts.id
-type            text (title)
-happened_at     timestamp
-direction       enum('inbound','outbound')   -- optional
-notes           text
+Interactions API - Track communication history with contacts
+
+Database Schema:
+- id: UUID (PK)
+- user_id: UUID (FK → users.id)
+- contact_id: UUID (FK → contacts.id)
+- type: enum('email', 'call', 'dm', 'meet', 'other')
+- direction: enum('inbound', 'outbound')
+- happened_at: timestamp
+- notes: text
+- created_at: timestamp
 """
 
 # ---------------------------
 # Models
 # ---------------------------
 class interactionRequest(BaseModel):
+    """
+    Create a new interaction
+    
+    Example:
+    {
+        "contact_id": "123e4567-e89b-12d3-a456-426614174000",
+        "type": "call",
+        "direction": "outbound",
+        "happened_at": "2025-12-27T15:30:00Z",
+        "notes": "Discussed project timeline"
+    }
+    """
     contact_id: str
-    type: str
+    type: Literal['email', 'call', 'dm', 'meet', 'other']
+    direction: Literal['inbound', 'outbound']
     happened_at: str  # ISO 8601 date string
-    direction: str | None = None  # 'inbound' or 'outbound'
     notes: str | None = None
+    
+    @validator('happened_at')
+    def validate_timestamp(cls, v):
+        try:
+            datetime.fromisoformat(v.replace('Z', '+00:00'))
+            return v
+        except ValueError:
+            raise ValueError('happened_at must be a valid ISO 8601 timestamp')
 
 
 class editInteractionRequest(BaseModel):
-    type: str | None = None
+    """
+    Update an existing interaction (partial update)
+    
+    Example:
+    {
+        "notes": "Updated notes after follow-up"
+    }
+    """
+    type: Literal['email', 'call', 'dm', 'meet', 'other'] | None = None
+    direction: Literal['inbound', 'outbound'] | None = None
     happened_at: str | None = None  # ISO 8601 date string
-    direction: str | None = None  # 'inbound' or 'outbound'
     notes: str | None = None
+    
+    @validator('happened_at')
+    def validate_timestamp(cls, v):
+        if v is not None:
+            try:
+                datetime.fromisoformat(v.replace('Z', '+00:00'))
+                return v
+            except ValueError:
+                raise ValueError('happened_at must be a valid ISO 8601 timestamp')
+        return v
 
 
 # ---------------------------
@@ -40,7 +84,24 @@ class editInteractionRequest(BaseModel):
 
 @router.get("/{contact_id}")
 @limiter.limit(RateLimits.CONTACTS)
-def list_interactions(contact_id:str,request: Request, user=Depends(get_current_user), include_groups: bool = False):
+def list_interactions(contact_id: str, request: Request, user=Depends(get_current_user)):
+    """
+    Get all interactions for a specific contact
+    
+    Returns:
+    [
+        {
+            "id": "123e4567-e89b-12d3-a456-426614174000",
+            "user_id": "user-uuid",
+            "contact_id": "contact-uuid",
+            "type": "call",
+            "direction": "outbound",
+            "happened_at": "2025-12-27T15:30:00Z",
+            "notes": "Discussed project timeline",
+            "created_at": "2025-12-27T15:35:00Z"
+        }
+    ]
+    """
     try:
         # Verify contact belongs to user
         contact_check = supabase_client.table("contacts") \
@@ -55,6 +116,7 @@ def list_interactions(contact_id:str,request: Request, user=Depends(get_current_
         response = supabase_client.table("interactions") \
             .select("*") \
             .eq("contact_id", contact_id) \
+            .order("happened_at", desc=True) \
             .execute()
         
         return response.data if response.data else []
@@ -67,6 +129,11 @@ def list_interactions(contact_id:str,request: Request, user=Depends(get_current_
 @router.get("/user/all")
 @limiter.limit(RateLimits.CONTACTS)
 def list_user_interactions(request: Request, user=Depends(get_current_user)):
+    """
+    Get all interactions for the current user across all contacts
+    
+    Returns interactions sorted by happened_at (most recent first)
+    """
     try:
         response = supabase_client.table("interactions") \
             .select("*") \

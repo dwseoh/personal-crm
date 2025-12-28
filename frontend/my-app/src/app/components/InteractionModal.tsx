@@ -107,8 +107,8 @@ export default function InteractionModal({
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-            <div className="bg-base-200 rounded-lg shadow-xl w-full max-w-md mx-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-base-100 bg-opacity-50 p-4">
+            <div className="bg-base-100 border border-base-300 rounded-xl shadow-2xl w-full max-w-md my-8 max-h-[90vh] overflow-y-auto">
                 {/* Header */}
                 <div className="flex items-center justify-between p-6 border-b border-base-300">
                     <h2 className="text-xl font-bold text-base-content">
@@ -140,7 +140,7 @@ export default function InteractionModal({
 
                     {/* Type selector */}
                     <div>
-                        <label className="block text-sm font-medium text-base-content opacity-70 mb-2">
+                        <label className="block text-sm font-medium text-base-content/70 mb-2">
                             Type
                         </label>
                         <div className="grid grid-cols-2 gap-2">
@@ -149,9 +149,9 @@ export default function InteractionModal({
                                     key={option.value}
                                     type="button"
                                     onClick={() => setType(option.value as Interaction["type"])}
-                                    className={`p-3 rounded-lg border-2 transition-all text-left ${type === option.value
-                                            ? "border-primary bg-primary bg-opacity-10"
-                                            : "border-base-300 hover:border-base-content hover:border-opacity-30"
+                                    className={`p-3 rounded-lg border transition-all text-left ${type === option.value
+                                        ? "border-primary bg-primary/10"
+                                        : "border-base-300 bg-base-200 hover:border-base-content/50"
                                         }`}
                                 >
                                     <span className="text-base-content">{option.label}</span>
@@ -162,16 +162,16 @@ export default function InteractionModal({
 
                     {/* Direction selector */}
                     <div>
-                        <label className="block text-sm font-medium text-base-content opacity-70 mb-2">
+                        <label className="block text-sm font-medium text-base-content/70 mb-2">
                             Direction
                         </label>
                         <div className="flex gap-2">
                             <button
                                 type="button"
                                 onClick={() => setDirection("inbound")}
-                                className={`flex-1 p-3 rounded-lg border-2 transition-all ${direction === "inbound"
-                                        ? "border-primary bg-primary bg-opacity-10"
-                                        : "border-base-300 hover:border-base-content hover:border-opacity-30"
+                                className={`flex-1 p-3 rounded-lg border transition-all ${direction === "inbound"
+                                    ? "border-primary bg-primary/10"
+                                    : "border-base-300 bg-base-200 hover:border-base-content/50"
                                     }`}
                             >
                                 <span className="text-base-content">← Inbound</span>
@@ -179,9 +179,9 @@ export default function InteractionModal({
                             <button
                                 type="button"
                                 onClick={() => setDirection("outbound")}
-                                className={`flex-1 p-3 rounded-lg border-2 transition-all ${direction === "outbound"
-                                        ? "border-primary bg-primary bg-opacity-10"
-                                        : "border-base-300 hover:border-base-content hover:border-opacity-30"
+                                className={`flex-1 p-3 rounded-lg border transition-all ${direction === "outbound"
+                                    ? "border-primary bg-primary/10"
+                                    : "border-base-300 bg-base-200 hover:border-base-content/50"
                                     }`}
                             >
                                 <span className="text-base-content">→ Outbound</span>
@@ -191,7 +191,7 @@ export default function InteractionModal({
 
                     {/* Date/time picker */}
                     <div>
-                        <label className="block text-sm font-medium text-base-content opacity-70 mb-2">
+                        <label className="block text-sm font-medium text-base-content/70 mb-2">
                             Date & Time
                         </label>
                         <input
@@ -199,13 +199,13 @@ export default function InteractionModal({
                             value={happenedAt}
                             onChange={(e) => setHappenedAt(e.target.value)}
                             required
-                            className="w-full p-3 bg-base-100 border border-base-300 rounded-lg text-base-content focus:outline-none focus:ring-2 focus:ring-primary"
+                            className="w-full p-3 bg-base-200 border border-base-300 rounded-lg text-base-content focus:outline-none focus:ring-2 focus:ring-primary"
                         />
                     </div>
 
                     {/* Notes */}
                     <div>
-                        <label className="block text-sm font-medium text-base-content opacity-70 mb-2">
+                        <label className="block text-sm font-medium text-base-content/70 mb-2">
                             Notes (optional)
                         </label>
                         <textarea
@@ -213,7 +213,7 @@ export default function InteractionModal({
                             onChange={(e) => setNotes(e.target.value)}
                             maxLength={500}
                             rows={4}
-                            className="w-full p-3 bg-base-100 border border-base-300 rounded-lg text-base-content focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+                            className="w-full p-3 bg-base-200 border border-base-300 rounded-lg text-base-content focus:outline-none focus:ring-2 focus:ring-primary resize-none"
                             placeholder="Add any notes about this interaction..."
                         />
                         <div className="text-xs text-base-content opacity-70 text-right mt-1">

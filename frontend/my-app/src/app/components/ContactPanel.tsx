@@ -962,7 +962,7 @@ export default function ContactPanel({
                 </div>
 
                 {/* Interactions Section */}
-                <div>
+                <div className="mt-6">
                   <div className="flex items-center justify-between mb-3">
                     <label className="block text-sm font-medium text-base-content opacity-70">
                       Interactions
@@ -991,20 +991,32 @@ export default function ContactPanel({
                   </div>
                   <div className="bg-base-100 border border-base-300 rounded-lg p-3">
                     <InteractionTimeline
-                      interactions={interactions}
+                      interactions={interactions.slice(0, 3)}
                       onEdit={handleEditInteraction}
                       onDelete={handleDeleteInteraction}
                       compact={true}
                     />
+                    {interactions.length > 3 && (
+                      <div className="text-center mt-3 pt-3 border-t border-base-300">
+                        <button
+                          onClick={handleOpenInteractionsTab}
+                          className="text-sm text-base-content opacity-70 hover:opacity-100 transition-opacity"
+                        >
+                          +{interactions.length - 3} more interaction{interactions.length - 3 !== 1 ? 's' : ''}...
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
 
                 {/* Similar Contacts Section */}
                 {selectedContact?.id && (
-                  <SimilarContactsSection
-                    contactId={selectedContact.id}
-                    contactName={selectedContact.name}
-                  />
+                  <div className="mt-6">
+                    <SimilarContactsSection
+                      contactId={selectedContact.id}
+                      contactName={selectedContact.name}
+                    />
+                  </div>
                 )}
               </div>
             </div>

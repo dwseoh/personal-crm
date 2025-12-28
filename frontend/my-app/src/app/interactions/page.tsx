@@ -381,6 +381,8 @@ export default function InteractionsPage() {
                                 interactions={filteredInteractions}
                                 onEdit={handleEditInteraction}
                                 onDelete={handleDeleteInteraction}
+                                getContactName={getContactName}
+                                showContactNames={!selectedContactId}
                             />
                         )}
                     </div>

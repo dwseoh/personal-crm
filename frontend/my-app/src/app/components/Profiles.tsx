@@ -8,10 +8,10 @@ interface ProfilesProps {
   phone: string;
   notes: string;
   created_at?: string;
-  current_role?:string;
-  company?:string;
-  location?:string;
-  importance?:number;
+  current_role?: string;
+  company?: string;
+  location?: string;
+  importance?: number;
   onOpenPanel: (contact: {
     id?: string;
     name: string;
@@ -26,13 +26,13 @@ interface ProfilesProps {
   }) => void;
 }
 
-export default function Profiles({id, name, email, phone, notes, current_role, company, location, importance, onOpenPanel}: ProfilesProps) {
+export default function Profiles({ id, name, email, phone, notes, current_role, company, location, importance, onOpenPanel }: ProfilesProps) {
 
   return (
     <>
       {/* Contact card */}
       <button
-        onClick={() => onOpenPanel({id, name, email, phone, notes, current_role, company, location, importance})}
+        onClick={() => onOpenPanel({ id, name, email, phone, notes, current_role, company, location, importance })}
         className="w-full p-4 bg-base-100 border border-base-300 text-base-content rounded-xl hover:bg-base-200 hover:border-primary hover:shadow-lg transition-all duration-200 text-left group"
       >
         <div className="flex items-center space-x-3">

@@ -149,6 +149,68 @@ def calculate_total_groups(user_id: str) -> int:
         raise HTTPException(status_code=500, detail=f"Error calculating total groups: {str(e)}")
 
 
+def calculate_interactions_this_month(user_id: str) -> int:
+    """Calculate total interactions in the current month"""
+    try:
+        # Calculate start of current month
+        now = datetime.now(timezone.utc)
+        start_of_month = datetime(now.year, now.month, 1, tzinfo=timezone.utc)
+        
+        response = supabase_client.table("interactions") \
+            .select("id", count="exact") \
+            .eq("user_id", user_id) \
+            .gte("happened_at", start_of_month.isoformat()) \
+            .execute()
+        
+        return response.count if response.count is not None else 0
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error calculating interactions this month: {str(e)}")
+
+
+def find_top_contact_by_interactions(user_id: str) -> Dict[str, Any] | None:
+    """Find the contact with the most interactions"""
+    try:
+        # Get all interactions for the user
+        interactions_response = supabase_client.table("interactions") \
+            .select("contact_id") \
+            .eq("user_id", user_id) \
+            .execute()
+        
+        if not interactions_response.data:
+            return None
+        
+        # Count interactions per contact
+        contact_counts = {}
+        for interaction in interactions_response.data:
+            contact_id = interaction.get("contact_id")
+            if contact_id:
+                contact_counts[contact_id] = contact_counts.get(contact_id, 0) + 1
+        
+        if not contact_counts:
+            return None
+        
+        # Find contact with most interactions
+        top_contact_id = max(contact_counts, key=contact_counts.get)
+        interaction_count = contact_counts[top_contact_id]
+        
+        # Get contact details
+        contact_response = supabase_client.table("contacts") \
+            .select("name") \
+            .eq("id", top_contact_id) \
+            .single() \
+            .execute()
+        
+        if contact_response.data:
+            return {
+                "name": contact_response.data["name"],
+                "count": interaction_count
+            }
+        
+        return None
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error finding top contact: {str(e)}")
+
+
 # ---------------------------
 # Chart Data Aggregation Functions
 # ---------------------------
@@ -587,6 +649,51 @@ def get_fastest_growing_groups(user_id: str, limit: int = 5) -> List[Dict[str, A
         raise HTTPException(status_code=500, detail=f"Error getting fastest growing groups: {str(e)}")
 
 
+def aggregate_interactions_timeline(user_id: str, days: int = 30) -> List[Dict[str, Any]]:
+    """Aggregate interactions by date for the last N days"""
+    try:
+        # Calculate date range
+        now = datetime.now(timezone.utc)
+        start_date = now - timedelta(days=days)
+        
+        # Fetch interactions in date range
+        response = supabase_client.table("interactions") \
+            .select("happened_at") \
+            .eq("user_id", user_id) \
+            .gte("happened_at", start_date.isoformat()) \
+            .execute()
+        
+        if not response.data:
+            # Return empty data points for all days
+            return [
+                {
+                    "date": (start_date + timedelta(days=i)).strftime("%Y-%m-%d"),
+                    "count": 0
+                }
+                for i in range(days)
+            ]
+        
+        # Count interactions by date
+        date_counts = {}
+        for interaction in response.data:
+            date_str = interaction["happened_at"][:10]  # Get YYYY-MM-DD
+            date_counts[date_str] = date_counts.get(date_str, 0) + 1
+        
+        # Create complete timeline with all dates
+        timeline = []
+        for i in range(days):
+            date = start_date + timedelta(days=i)
+            date_str = date.strftime("%Y-%m-%d")
+            timeline.append({
+                "date": date_str,
+                "count": date_counts.get(date_str, 0)
+            })
+        
+        return timeline
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error aggregating interactions timeline: {str(e)}")
+
+
 def get_recent_contacts(user_id: str, limit: int = 5) -> List[Dict[str, Any]]:
     """Get N most recently created contacts"""
     try:
@@ -635,12 +742,15 @@ def get_dashboard_analytics(request: Request, user=Depends(get_current_user)):
         top_group = find_top_group(user_id)
         avg_importance = calculate_average_importance(user_id)
         high_priority_count = count_high_priority_contacts(user_id)
+        interactions_this_month = calculate_interactions_this_month(user_id)
+        top_contact = find_top_contact_by_interactions(user_id)
         
         # Aggregate chart data
         group_distribution = aggregate_group_distribution(user_id)
         importance_distribution = aggregate_importance_distribution(user_id)
         location_distribution = aggregate_location_distribution(user_id)
         role_distribution = aggregate_role_distribution(user_id)
+        interactions_timeline = aggregate_interactions_timeline(user_id, days=30)
         
         # Calculate insights
         role_clusters = find_role_clusters(user_id)
@@ -663,13 +773,16 @@ def get_dashboard_analytics(request: Request, user=Depends(get_current_user)):
                 "total_groups": total_groups,
                 "top_group": top_group,
                 "avg_importance": avg_importance,
-                "high_priority_count": high_priority_count
+                "high_priority_count": high_priority_count,
+                "interactions_this_month": interactions_this_month,
+                "top_contact": top_contact
             },
             "charts": {
                 "group_distribution": group_distribution,
                 "importance_distribution": importance_distribution,
                 "location_distribution": location_distribution,
-                "role_distribution": role_distribution
+                "role_distribution": role_distribution,
+                "interactions_timeline": interactions_timeline
             },
             "insights": {
                 "role_clusters": role_clusters,
@@ -681,7 +794,8 @@ def get_dashboard_analytics(request: Request, user=Depends(get_current_user)):
                 "top_roles": top_roles,
                 "growing_groups": growing_groups,
                 "recent_contacts": recent_contacts,
-                "network_health": network_health
+                "network_health": network_health,
+                "priority_contacts": []  # Will be populated by frontend based on mode
             }
         }
         

@@ -1,20 +1,13 @@
 "use client";
 import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
+import { logout } from "@/hooks/useAuth";
 
 export default function Sidebar() {
   const [isOpen, setIsOpen] = useState(false);
   const router = useRouter();
   const sidebarRef = useRef<HTMLDivElement>(null);
-  const handleLogout = () => {
-    // Remove token
-    localStorage.removeItem("token");
-    localStorage.removeItem("username");
-    localStorage.removeItem("user_id");
 
-    // Redirect to login or home
-    router.push("/login");
-  };
   const [username, setUsername] = useState<string | null>(null);
 
   useEffect(() => {
@@ -85,7 +78,7 @@ export default function Sidebar() {
             onClick={() => router.push("/interactions")}
             className="px-4 py-3 text-left hover:bg-base-300 rounded-lg transition-colors duration-200 text-base-content"
           >
-            💬 Interactions
+            Interactions
           </button>
           <button
             onClick={() => router.push("/groups")}
@@ -99,12 +92,6 @@ export default function Sidebar() {
           >
             Profile
           </button>
-          <button
-            onClick={() => router.push("/settings")}
-            className="px-4 py-3 text-left hover:bg-base-300 rounded-lg transition-colors duration-200 text-base-content"
-          >
-            Settings
-          </button>
 
           {/* Divider */}
           <div className="border-t border-base-300 my-2"></div>
@@ -116,7 +103,7 @@ export default function Sidebar() {
             Home
           </button>
           <button
-            onClick={handleLogout}
+            onClick={logout}
             className="px-4 py-3 text-left hover:bg-error hover:text-error-content rounded-lg transition-colors duration-200 text-base-content"
           >
             Logout

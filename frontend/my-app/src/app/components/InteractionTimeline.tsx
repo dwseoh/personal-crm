@@ -4,6 +4,7 @@ import { formatDistanceToNow } from "date-fns";
 
 interface Interaction {
   id: string;
+  contact_id?: string;
   type: "email" | "call" | "dm" | "meet" | "other";
   direction: "inbound" | "outbound";
   happened_at: string;
@@ -16,6 +17,8 @@ interface InteractionTimelineProps {
   onEdit?: (interaction: Interaction) => void;
   onDelete?: (interactionId: string) => void;
   compact?: boolean;
+  getContactName?: (contactId?: string) => string;
+  showContactNames?: boolean;
 }
 
 const TYPE_ICONS: Record<string, string> = {
@@ -39,6 +42,8 @@ export default function InteractionTimeline({
   onEdit,
   onDelete,
   compact = false,
+  getContactName,
+  showContactNames = false,
 }: InteractionTimelineProps) {
   const [expandedNotes, setExpandedNotes] = useState<Set<string>>(new Set());
 
@@ -108,6 +113,13 @@ export default function InteractionTimeline({
                         {interaction.direction === "inbound" ? "← Inbound" : "→ Outbound"}
                       </span>
                     </div>
+
+                    {/* Contact name (if showing all interactions) */}
+                    {showContactNames && getContactName && (
+                      <p className="text-sm text-base-content font-medium mt-1">
+                        {getContactName(interaction.contact_id)}
+                      </p>
+                    )}
 
                     {/* Date */}
                     <p className="text-xs text-base-content opacity-70 mt-1">

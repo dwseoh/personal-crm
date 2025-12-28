@@ -224,52 +224,52 @@ export default function Contacts() {
     loadGroups();
   }, []);
 
-/*   // Load groups for contacts
-  const loadContactGroups = async (contactsData: Contact[]) => {
-    const token = localStorage.getItem("token");
-    if (!token) return;
-
-    setLoadingGroups(true);
-    const groupsMap: { [contactId: string]: string[] } = {};
-
-    try {
-      // Load groups for each contact
-      await Promise.all(
-        contactsData.map(async (contact) => {
-          if (contact.id) {
-            try {
-              const res = await fetch(
-                `http://127.0.0.1:8000/contacts/${contact.id}/groups`,
-                {
-                  headers: { Authorization: `Bearer ${token}` },
+  /*   // Load groups for contacts
+    const loadContactGroups = async (contactsData: Contact[]) => {
+      const token = localStorage.getItem("token");
+      if (!token) return;
+  
+      setLoadingGroups(true);
+      const groupsMap: { [contactId: string]: string[] } = {};
+  
+      try {
+        // Load groups for each contact
+        await Promise.all(
+          contactsData.map(async (contact) => {
+            if (contact.id) {
+              try {
+                const res = await fetch(
+                  `http://127.0.0.1:8000/contacts/${contact.id}/groups`,
+                  {
+                    headers: { Authorization: `Bearer ${token}` },
+                  }
+                );
+                if (res.ok) {
+                  const groups = await res.json();
+                  groupsMap[contact.id] = groups.map((g: any) => g.id);
+  
+                } else {
+                  groupsMap[contact.id] = [];
                 }
-              );
-              if (res.ok) {
-                const groups = await res.json();
-                groupsMap[contact.id] = groups.map((g: any) => g.id);
-
-              } else {
+                
+              } catch (error) {
+                console.error(
+                  `Failed to load groups for contact ${contact.id}:`,
+                  error
+                );
                 groupsMap[contact.id] = [];
               }
-              
-            } catch (error) {
-              console.error(
-                `Failed to load groups for contact ${contact.id}:`,
-                error
-              );
-              groupsMap[contact.id] = [];
             }
-          }
-        })
-      );
-
-      setContactGroups(groupsMap);
-    } catch (error) {
-      console.error("Failed to load contact groups:", error);
-    } finally {
-      setLoadingGroups(false);
-    }
-  }; */
+          })
+        );
+  
+        setContactGroups(groupsMap);
+      } catch (error) {
+        console.error("Failed to load contact groups:", error);
+      } finally {
+        setLoadingGroups(false);
+      }
+    }; */
 
   // Refresh function for manual refresh
   const refreshContacts = () => {
@@ -453,11 +453,10 @@ export default function Contacts() {
             <div className="flex items-center space-x-1 bg-base-300 rounded-lg p-1">
               <button
                 onClick={() => setViewMode("block")}
-                className={`p-2 rounded transition-opacity ${
-                  viewMode === "block"
+                className={`p-2 rounded transition-opacity ${viewMode === "block"
                     ? "bg-base-100 text-base-content"
                     : "text-base-content opacity-25 hover:opacity-100"
-                }`}
+                  }`}
                 title="Block view"
               >
                 <svg
@@ -476,11 +475,10 @@ export default function Contacts() {
               </button>
               <button
                 onClick={() => setViewMode("list")}
-                className={`p-2 rounded transition-opacity ${
-                  viewMode === "list"
+                className={`p-2 rounded transition-opacity ${viewMode === "list"
                     ? "bg-base-100 text-base-content"
                     : "text-base-content opacity-25 hover:opacity-100"
-                }`}
+                  }`}
                 title="List view"
               >
                 <svg
@@ -638,7 +636,7 @@ export default function Contacts() {
                     current_role={contact.current_role ?? ""}
                     location={contact.location ?? ""}
                     importance={contact.importance ?? 1}
-                    company = {contact.company ?? ""}
+                    company={contact.company ?? ""}
                     onOpenPanel={handleOpenPanel}
                   />
                 ))}
@@ -756,7 +754,7 @@ export default function Contacts() {
                               onClick={() => handleOpenPanel(contact)}
                             >
                               <div className="flex items-center space-x-3">
-                                <div className="w-8 h-8 rounded-full bg-primary text-primary-content flex items-center justify-center font-semibold text-sm flex-shrink-0">
+                                <div className="w-8 h-8 rounded-full bg-neutral text-neutral-content flex items-center justify-center font-semibold text-sm flex-shrink-0">
                                   {contact.name.charAt(0).toUpperCase()}
                                 </div>
                                 <span className="font-medium text-base-content">
@@ -782,8 +780,8 @@ export default function Contacts() {
                             >
                               {contact.created_at
                                 ? new Date(
-                                    contact.created_at
-                                  ).toLocaleDateString()
+                                  contact.created_at
+                                ).toLocaleDateString()
                                 : "N/A"}
                             </td>
                             <td

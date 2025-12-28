@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 
 interface Interaction {
     id?: string;
-    contact_id: string;
+    contact_id?: string;
     type: "email" | "call" | "dm" | "meet" | "other";
     direction: "inbound" | "outbound";
     happened_at: string;

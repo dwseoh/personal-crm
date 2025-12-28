@@ -433,7 +433,7 @@ export default function ContactPanel({
           {/* Panel content */}
           <div className="flex-1 p-6 overflow-y-auto">
             <div className="flex items-center space-x-4 mb-6">
-              <div className="w-20 h-20 bg-primary text-primary-content rounded-full flex flex-shrink-0 items-center justify-center text-2xl font-bold">
+              <div className="w-20 h-20 bg-neutral text-primary-content rounded-full flex flex-shrink-0 items-center justify-center text-2xl font-bold">
                 {selectedContact.name.charAt(0).toUpperCase()}
               </div>
               <div className="flex-1 min-w-0">

@@ -24,9 +24,10 @@ export interface Contact {
 export interface PriorityContact {
     contact_id: string;
     contact_name: string;
+    importance: number;
     score: number;
     explanation: string;
-    days_since_last: number;
+    days_since_last_interaction: number;
     total_interactions_30d: number;
 }
 
@@ -61,6 +62,7 @@ export interface GroupDistribution {
     name: string;
     value: number;
     color: string;
+    [key: string]: string | number | undefined;
 }
 
 export interface InteractionTimelineData {

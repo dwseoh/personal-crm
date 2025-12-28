@@ -79,9 +79,9 @@ export default function PriorityContactsPanel({
                             onClick={() => router.push(`/contacts`)}
                         >
                             <div className="flex items-center gap-3 flex-1 min-w-0">
-                                {/* Rank badge */}
-                                <div className="w-8 h-8 rounded-full bg-primary bg-opacity-10 flex items-center justify-center flex-shrink-0">
-                                    <span className="text-sm font-bold text-primary">#{index + 1}</span>
+                                {/* Profile avatar */}
+                                <div className="w-10 h-10 rounded-full bg-neutral text-neutral-content flex items-center justify-center font-semibold text-sm flex-shrink-0">
+                                    {contact.contact_name.charAt(0).toUpperCase()}
                                 </div>
 
                                 {/* Contact info */}

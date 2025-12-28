@@ -49,7 +49,7 @@ def build_interaction_feature_matrix(user_id: str) -> Dict[str, Dict[str, float]
         contacts_response = (
             supabase_client
             .table("contacts")
-            .select("id, name")
+            .select("id, name, importance")
             .eq("user_id", user_id)
             .execute()
         )
@@ -78,12 +78,14 @@ def build_interaction_feature_matrix(user_id: str) -> Dict[str, Dict[str, float]
         for contact in contacts_response.data:
             contact_id = contact["id"]
             contact_name = contact["name"]
+            importance = contact.get("importance", 1)  # Default to 1 if not set
             contact_interactions = interaction_map.get(contact_id, [])
 
             # No interactions
             if not contact_interactions:
                 feature_matrix[contact_id] = {
                     "contact_name": contact_name,
+                    "importance": importance,
                     "days_since_last_interaction": 999,
                     "total_interactions_30d": 0,
                     "total_interactions_365d": 0,
@@ -107,6 +109,7 @@ def build_interaction_feature_matrix(user_id: str) -> Dict[str, Dict[str, float]
             if not parsed:
                 feature_matrix[contact_id] = {
                     "contact_name": contact_name,
+                    "importance": importance,
                     "days_since_last_interaction": 999,
                     "total_interactions_30d": 0,
                     "total_interactions_365d": 0,
@@ -122,6 +125,7 @@ def build_interaction_feature_matrix(user_id: str) -> Dict[str, Dict[str, float]
 
             feature_matrix[contact_id] = {
                 "contact_name": contact_name,
+                "importance": importance,
                 "days_since_last_interaction": float(days_since_last),
                 "total_interactions_30d": sum(
                     1 for i in parsed if i["happened_at"] >= thirty_days_ago
@@ -176,18 +180,24 @@ def score_contacts(
         norm_total_365d = min(f["total_interactions_365d"] / 200.0, 1.0)
         norm_inbound_30d = min(f["inbound_30d"] / 25.0, 1.0)
         norm_outbound_30d = min(f["outbound_30d"] / 25.0, 1.0)
+        norm_importance = (f["importance"] - 1) / 4.0  # Normalize 1-5 to 0-1
 
-        score = (
+        # Base interaction score (80% weight)
+        interaction_score = (
             weights["days_since_last_interaction"] * norm_days +
             weights["total_interactions_30d"] * (1 - norm_total_30d) +
             weights["total_interactions_365d"] * (1 - norm_total_365d) +
             weights["inbound_30d"] * (1 - norm_inbound_30d) +
             weights["outbound_30d"] * (1 - norm_outbound_30d)
         )
+        
+        # Final score: 80% interaction-based + 20% importance-based
+        score = (0.8 * interaction_score) + (0.2 * norm_importance)
 
         scored.append({
             "contact_id": cid,
             "contact_name": f["contact_name"],
+            "importance": f["importance"],
             "score": round(score * 100, 1),
             "explanation": generate_priority_explanation(f),
             "days_since_last_interaction": int(f["days_since_last_interaction"]),

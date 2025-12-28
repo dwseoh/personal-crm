@@ -961,56 +961,63 @@ export default function ContactPanel({
                   )}
                 </div>
 
-                {/* Interactions Section */}
-                <div className="mt-6">
-                  <div className="flex items-center justify-between mb-3">
-                    <label className="block text-sm font-medium text-base-content opacity-70">
-                      Interactions
-                    </label>
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => setIsInteractionModalOpen(true)}
-                        className="flex items-center space-x-1 px-3 py-2 rounded-lg text-sm font-medium transition-all bg-primary/10 text-primary hover:bg-primary hover:text-primary-content"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                        </svg>
-                        <span>Add</span>
-                      </button>
-                      <button
-                        onClick={handleOpenInteractionsTab}
-                        className="flex items-center space-x-1 px-3 py-2 rounded-lg text-sm font-medium transition-all bg-base-300 text-base-content hover:bg-base-100"
-                        title="Open in new tab"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                        </svg>
-                        <span>Open</span>
-                      </button>
-                    </div>
-                  </div>
-                  <div className="bg-base-100 border border-base-300 rounded-lg p-3">
-                    <InteractionTimeline
-                      interactions={interactions.slice(0, 3)}
-                      onEdit={handleEditInteraction}
-                      onDelete={handleDeleteInteraction}
-                      compact={true}
-                    />
-                    {interactions.length > 3 && (
-                      <div className="text-center mt-3 pt-3 border-t border-base-300">
+                {/* Separator between Groups and Interactions */}
+                {!isEditing && (
+                  <hr className="my-6 border-base-300" />
+                )}
+
+                {/* Interactions Section - Hidden in edit mode */}
+                {!isEditing && (
+                  <div className="mt-6">
+                    <div className="flex items-center justify-between mb-3">
+                      <label className="block text-sm font-medium text-base-content opacity-70">
+                        Interactions
+                      </label>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => setIsInteractionModalOpen(true)}
+                          className="flex items-center space-x-1 px-3 py-2 rounded-lg text-sm font-medium transition-all bg-primary/10 text-primary hover:bg-primary hover:text-primary-content"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                          </svg>
+                          <span>Add</span>
+                        </button>
                         <button
                           onClick={handleOpenInteractionsTab}
-                          className="text-sm text-base-content opacity-70 hover:opacity-100 transition-opacity"
+                          className="flex items-center space-x-1 px-3 py-2 rounded-lg text-sm font-medium transition-all bg-base-300 text-base-content hover:bg-base-100"
+                          title="Open in new tab"
                         >
-                          +{interactions.length - 3} more interaction{interactions.length - 3 !== 1 ? 's' : ''}...
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                          </svg>
+                          <span>Open</span>
                         </button>
                       </div>
-                    )}
+                    </div>
+                    <div className="bg-base-100 border border-base-300 rounded-lg p-3">
+                      <InteractionTimeline
+                        interactions={interactions.slice(0, 3)}
+                        onEdit={handleEditInteraction}
+                        onDelete={handleDeleteInteraction}
+                        compact={true}
+                      />
+                      {interactions.length > 3 && (
+                        <div className="text-center mt-3 pt-3 border-t border-base-300">
+                          <button
+                            onClick={handleOpenInteractionsTab}
+                            className="text-sm text-base-content opacity-70 hover:opacity-100 transition-opacity"
+                          >
+                            +{interactions.length - 3} more interaction{interactions.length - 3 !== 1 ? 's' : ''}...
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
+                )}
 
-                {/* Similar Contacts Section */}
-                {selectedContact?.id && (
+                {/* Similar Contacts Section - Hidden in edit mode */}
+                {!isEditing && selectedContact?.id && (
                   <div className="mt-6">
                     <SimilarContactsSection
                       contactId={selectedContact.id}

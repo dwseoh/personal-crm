@@ -1,4 +1,15 @@
-# Personal CRM Project
+<div align="center"> 
+  <h1>Personal CRM Project</h1>
+
+![GitHub stars](https://img.shields.io/github/stars/dwseoh/personal-crm?style=for-the-badge)
+![GitHub forks](https://img.shields.io/github/forks/dwseoh/personal-crm?style=for-the-badge)
+![GitHub repo size](https://img.shields.io/github/repo-size/dwseoh/personal-crm?style=for-the-badge)
+![GitHub top language](https://img.shields.io/github/languages/top/dwseoh/personal-crm?style=for-the-badge)
+![GitHub last commit](https://img.shields.io/github/last-commit/dwseoh/personal-crm?style=for-the-badge)
+
+</div>
+<br>
+
 
 ## 📋 Project Overview
 

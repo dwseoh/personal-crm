@@ -25,7 +25,18 @@ export default function Dashboard() {
 
   useEffect(() => {
     if (dashboardData) {
-      loadPriorityContacts();
+      // If we have bundled priority contacts and we're in default mode, use them
+      // This saves an API call on initial load
+      if (
+        priorityMode === "default" &&
+        dashboardData.sidebar?.priority_contacts &&
+        dashboardData.sidebar.priority_contacts.length > 0
+      ) {
+        setPriorityContacts(dashboardData.sidebar.priority_contacts);
+      } else {
+        // Otherwise fetch as usual (e.g. for other modes or if not bundled)
+        loadPriorityContacts();
+      }
     }
   }, [priorityMode, dashboardData]);
 
@@ -87,6 +98,9 @@ export default function Dashboard() {
   const loadPriorityContacts = async () => {
     const token = localStorage.getItem("token");
     if (!token) return;
+
+    // Don't fetch if we already used bundled data (checked in useEffect)
+    // But inside this function we just fetch. The guard is in useEffect.
 
     setIsPriorityLoading(true);
 

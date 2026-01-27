@@ -39,6 +39,25 @@ WEIGHT_VECTORS = {
 # ---------------------------
 # Feature Matrix Construction
 # ---------------------------
+# ---------------------------
+# Caching for Feature Matrix
+# ---------------------------
+_feature_matrix_cache: Dict[str, Dict] = {}
+CACHE_TTL_SECONDS = 300  # 5 minutes
+
+def get_cached_feature_matrix(user_id: str) -> Dict[str, Dict[str, float]]:
+    now = datetime.now(timezone.utc)
+    
+    if user_id in _feature_matrix_cache:
+        timestamp, data = _feature_matrix_cache[user_id]
+        if (now - timestamp).total_seconds() < CACHE_TTL_SECONDS:
+            return data
+            
+    # Rebuild cache
+    data = build_interaction_feature_matrix(user_id)
+    _feature_matrix_cache[user_id] = (now, data)
+    return data
+
 def build_interaction_feature_matrix(user_id: str) -> Dict[str, Dict[str, float]]:
     try:
         now = datetime.now(timezone.utc)
@@ -167,7 +186,7 @@ def score_contacts(
         )
 
     weights = WEIGHT_VECTORS[mode]
-    feature_matrix = build_interaction_feature_matrix(user_id)
+    feature_matrix = get_cached_feature_matrix(user_id)
 
     if not feature_matrix:
         return []
@@ -235,7 +254,7 @@ def get_similar_contacts(
     limit: int = 5
 ) -> List[Dict[str, Any]]:
 
-    feature_matrix = build_interaction_feature_matrix(user_id)
+    feature_matrix = get_cached_feature_matrix(user_id)
 
     if contact_id not in feature_matrix:
         return []

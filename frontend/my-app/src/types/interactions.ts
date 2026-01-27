@@ -156,5 +156,6 @@ export interface DashboardAnalytics {
         growing_groups: any[];
         recent_contacts: RecentContact[];
         network_health: NetworkHealth;
+        priority_contacts: PriorityContact[];
     };
 }

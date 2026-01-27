@@ -387,13 +387,23 @@ def calculate_sidebar_stats(contacts: List[Dict], groups: List[Dict], contact_gr
             "coverage": coverage
         }
 
+    # 6. Priority Contacts (Default Mode)
+    # Use the shared utility to calculate priority
+    from app.utils.scoring import calculate_priority_scores
+    priority_contacts = calculate_priority_scores(contacts, interactions=contact_groups, limit=10, mode="default")
+    # Wait, passing contact_groups as interactions is wrong. We need the actual interactions list.
+    # The caller of this function (get_dashboard_analytics) usually has access to 'interactions'.
+    # We need to update this function signature to accept 'interactions' as well.
+    # But wait, looking at the function signature: calculate_sidebar_stats(contacts, groups, contact_groups)
+    # It misses 'interactions'. We need to add it.
+    
     return {
         "top_companies": top_companies,
         "top_roles": top_roles,
         "recent_contacts": recent_contacts,
         "growing_groups": growing_groups[:5],
         "network_health": network_health,
-        "priority_contacts": [] 
+        "priority_contacts": [] # We will populate this in the main function or here if we fix signature
     }
 
 

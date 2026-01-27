@@ -4,804 +4,429 @@ from app.core.rate_limiter import limiter, RateLimits
 from app.auth import get_current_user
 from datetime import datetime, timedelta, timezone
 from typing import Dict, List, Any
+from collections import defaultdict
 
 router = APIRouter(prefix="/dashboard", tags=["dashboard"])
 
 
 # ---------------------------
-# KPI Calculation Functions
+# Data Fetching Helpers
 # ---------------------------
 
-def calculate_total_contacts(user_id: str) -> int:
-    """Calculate total number of contacts for a user"""
+def fetch_dashboard_data(user_id: str):
+    """Fetch all necessary data in parallel-ready blocks"""
     try:
-        response = supabase_client.table("contacts") \
-            .select("id", count="exact") \
+        # 1. Fetch all contacts
+        contacts_response = supabase_client.table("contacts") \
+            .select("id, name, created_at, importance, company, current_role, location") \
             .eq("user_id", user_id) \
             .execute()
-        return response.count if response.count is not None else 0
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error calculating total contacts: {str(e)}")
+        contacts = contacts_response.data or []
 
-
-def calculate_new_contacts(user_id: str) -> Dict[str, int]:
-    """Calculate new contacts in last 30 days and trend"""
-    try:
-        # Calculate date 30 days ago
-        thirty_days_ago = datetime.now(timezone.utc) - timedelta(days=30)
-        sixty_days_ago = datetime.now(timezone.utc) - timedelta(days=60)
-        
-        # Get contacts from last 30 days
-        recent_response = supabase_client.table("contacts") \
-            .select("id", count="exact") \
-            .eq("user_id", user_id) \
-            .gte("created_at", thirty_days_ago.isoformat()) \
-            .execute()
-        
-        recent_count = recent_response.count if recent_response.count is not None else 0
-        
-        # Get contacts from 30-60 days ago for trend calculation
-        previous_response = supabase_client.table("contacts") \
-            .select("id", count="exact") \
-            .eq("user_id", user_id) \
-            .gte("created_at", sixty_days_ago.isoformat()) \
-            .lt("created_at", thirty_days_ago.isoformat()) \
-            .execute()
-        
-        previous_count = previous_response.count if previous_response.count is not None else 0
-        
-        # Calculate trend percentage
-        if previous_count > 0:
-            trend = int(((recent_count - previous_count) / previous_count) * 100)
-        else:
-            trend = 100 if recent_count > 0 else 0
-        
-        return {
-            "count": recent_count,
-            "trend": trend
-        }
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error calculating new contacts: {str(e)}")
-
-
-def find_top_group(user_id: str) -> Dict[str, Any] | None:
-    """Find the group with the most contacts"""
-    try:
-        # Get all groups for the user
+        # 2. Fetch all groups
         groups_response = supabase_client.table("groups") \
             .select("id, name, label_color") \
             .eq("user_id", user_id) \
             .execute()
-        
-        if not groups_response.data:
-            return None
-        
-        # Count contacts for each group
-        top_group = None
-        max_count = 0
-        
-        for group in groups_response.data:
-            contact_count_response = supabase_client.table("contact_groups") \
-                .select("contact_id", count="exact") \
-                .eq("group_id", group["id"]) \
+        groups = groups_response.data or []
+
+        # 3. Fetch all contact-group associations
+        # We need this to link contacts to groups
+        # Note: We can't filter by user_id directly on junction table usually, 
+        # but RLS should handle it if set up, or we filter by known contact IDs.
+        # Ideally, we'd filter by contact_id in (contacts_ids), but for now let's assume RLS or fetch all.
+        # To be safe and efficient without RLS assumptions, let's fetch based on contact IDs if possible,
+        # but Supabase 'in' query might be limited.
+        # Let's assume the junction table has RLS or we just fetch all and filter in memory if needed (risk of data leak if no RLS? No, usually RLS applies).
+        # Prudent approach: Fetch all contact_groups for the contacts we just fetched.
+        contact_ids = [c["id"] for c in contacts]
+        contact_groups = []
+        if contact_ids:
+            # Batch fetch if too many? For personal CRM, likely fine.
+            cg_response = supabase_client.table("contact_groups") \
+                .select("contact_id, group_id") \
+                .in_("contact_id", contact_ids) \
                 .execute()
-            
-            count = contact_count_response.count if contact_count_response.count is not None else 0
-            
-            if count > max_count:
-                max_count = count
-                top_group = {
-                    "name": group["name"],
-                    "count": count,
-                    "color": group["label_color"]
-                }
-        
-        return top_group
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error finding top group: {str(e)}")
+            contact_groups = cg_response.data or []
 
-
-def calculate_average_importance(user_id: str) -> float:
-    """Calculate average importance across all contacts"""
-    try:
-        response = supabase_client.table("contacts") \
-            .select("importance") \
-            .eq("user_id", user_id) \
-            .execute()
-        
-        if not response.data:
-            return 0.0
-        
-        importances = [contact["importance"] for contact in response.data if contact.get("importance") is not None]
-        
-        if not importances:
-            return 0.0
-        
-        return round(sum(importances) / len(importances), 1)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error calculating average importance: {str(e)}")
-
-
-def count_high_priority_contacts(user_id: str) -> int:
-    """Count contacts with importance >= 4"""
-    try:
-        response = supabase_client.table("contacts") \
-            .select("id", count="exact") \
-            .eq("user_id", user_id) \
-            .gte("importance", 4) \
-            .execute()
-        
-        return response.count if response.count is not None else 0
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error counting high priority contacts: {str(e)}")
-
-
-def calculate_total_groups(user_id: str) -> int:
-    """Calculate total number of groups for a user"""
-    try:
-        response = supabase_client.table("groups") \
-            .select("id", count="exact") \
-            .eq("user_id", user_id) \
-            .execute()
-        
-        return response.count if response.count is not None else 0
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error calculating total groups: {str(e)}")
-
-
-def calculate_interactions_this_month(user_id: str) -> int:
-    """Calculate total interactions in the current month"""
-    try:
-        # Calculate start of current month
-        now = datetime.now(timezone.utc)
-        start_of_month = datetime(now.year, now.month, 1, tzinfo=timezone.utc)
-        
-        response = supabase_client.table("interactions") \
-            .select("id", count="exact") \
-            .eq("user_id", user_id) \
-            .gte("happened_at", start_of_month.isoformat()) \
-            .execute()
-        
-        return response.count if response.count is not None else 0
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error calculating interactions this month: {str(e)}")
-
-
-def find_top_contact_by_interactions(user_id: str) -> Dict[str, Any] | None:
-    """Find the contact with the most interactions"""
-    try:
-        # Get all interactions for the user
+        # 4. Fetch interactions (we need all for "top contact" stats, and recent for timeline)
+        # Optimizing: Fetch only minimal fields
         interactions_response = supabase_client.table("interactions") \
-            .select("contact_id") \
+            .select("id, contact_id, happened_at") \
             .eq("user_id", user_id) \
             .execute()
-        
-        if not interactions_response.data:
-            return None
-        
-        # Count interactions per contact
-        contact_counts = {}
-        for interaction in interactions_response.data:
-            contact_id = interaction.get("contact_id")
-            if contact_id:
-                contact_counts[contact_id] = contact_counts.get(contact_id, 0) + 1
-        
-        if not contact_counts:
-            return None
-        
-        # Find contact with most interactions
-        top_contact_id = max(contact_counts, key=contact_counts.get)
-        interaction_count = contact_counts[top_contact_id]
-        
-        # Get contact details
-        contact_response = supabase_client.table("contacts") \
-            .select("name") \
-            .eq("id", top_contact_id) \
-            .single() \
-            .execute()
-        
-        if contact_response.data:
-            return {
-                "name": contact_response.data["name"],
-                "count": interaction_count
-            }
-        
-        return None
+        interactions = interactions_response.data or []
+
+        return contacts, groups, contact_groups, interactions
+
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error finding top contact: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error fetching dashboard data: {str(e)}")
 
 
-# ---------------------------
-# Chart Data Aggregation Functions
-# ---------------------------
-
-def aggregate_group_distribution(user_id: str) -> List[Dict[str, Any]]:
-    """Aggregate contact distribution across groups"""
+def parse_datetime(dt_str: str) -> datetime:
+    """Helper to parse datetime string and ensure it is offset-aware (UTC)."""
     try:
-        # Get all groups for the user
-        groups_response = supabase_client.table("groups") \
-            .select("id, name, label_color") \
-            .eq("user_id", user_id) \
-            .execute()
-        
-        if not groups_response.data:
-            return []
-        
-        distribution = []
-        for group in groups_response.data:
-            # Count contacts in this group
-            contact_count_response = supabase_client.table("contact_groups") \
-                .select("contact_id", count="exact") \
-                .eq("group_id", group["id"]) \
-                .execute()
+        dt = datetime.fromisoformat(dt_str.replace('Z', '+00:00'))
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt
+    except ValueError:
+        # Fallback for other formats if necessary, or return current time to avoid crash
+        # For now, assume ISO format from Supabase
+        return datetime.now(timezone.utc)
+
+
+# ---------------------------
+# In-Memory Calculation Functions
+# ---------------------------
+
+def calculate_kpis(contacts: List[Dict], groups: List[Dict], interactions: List[Dict], contact_groups: List[Dict]) -> Dict[str, Any]:
+    now = datetime.now(timezone.utc)
+    thirty_days_ago = now - timedelta(days=30)
+    sixty_days_ago = now - timedelta(days=60)
+    start_of_month = datetime(now.year, now.month, 1, tzinfo=timezone.utc)
+
+    # 1. Total Contacts
+    total_contacts = len(contacts)
+
+    # 2. New Contacts & Trend
+    recent_contacts_created = [c for c in contacts if parse_datetime(c["created_at"]) >= thirty_days_ago]
+    previous_contacts_created = [c for c in contacts if sixty_days_ago <= parse_datetime(c["created_at"]) < thirty_days_ago]
+    
+    recent_count = len(recent_contacts_created)
+    previous_count = len(previous_contacts_created)
+    
+    if previous_count > 0:
+        trend = int(((recent_count - previous_count) / previous_count) * 100)
+    else:
+        trend = 100 if recent_count > 0 else 0
+
+    # 3. Total Groups
+    total_groups_count = len(groups)
+
+    # 4. Largest Group (Top Group)
+    group_counts = defaultdict(int)
+    for cg in contact_groups:
+        group_counts[cg["group_id"]] += 1
+    
+    top_group = None
+    if groups and group_counts:
+        # Map group ID to details
+        group_map = {g["id"]: g for g in groups}
+        top_group_id = max(group_counts, key=group_counts.get)
+        if top_group_id in group_map:
+            tg = group_map[top_group_id]
+            top_group = {
+                "name": tg["name"],
+                "count": group_counts[top_group_id],
+                "color": tg["label_color"]
+            }
+
+    # 5. Average Importance
+    total_importance = sum(c.get("importance", 0) or 0 for c in contacts if c.get("importance") is not None)
+    avg_importance = round(total_importance / total_contacts, 1) if total_contacts > 0 else 0.0
+
+    # 6. High Priority Contacts
+    high_priority_count = sum(1 for c in contacts if (c.get("importance") or 0) >= 4)
+
+    # 7. Interactions This Month
+    interactions_this_month_count = sum(1 for i in interactions if parse_datetime(i["happened_at"]) >= start_of_month)
+
+    # 8. Top Contact by Interactions
+    interaction_counts = defaultdict(int)
+    for i in interactions:
+        if i.get("contact_id"):
+            interaction_counts[i["contact_id"]] += 1
+    
+    top_contact = None
+    if interaction_counts:
+        top_contact_id = max(interaction_counts, key=interaction_counts.get)
+        # Find contact name
+        contact_name = next((c["name"] for c in contacts if c["id"] == top_contact_id), "Unknown")
+        top_contact = {
+            "name": contact_name,
+            "count": interaction_counts[top_contact_id]
+        }
+
+    return {
+        "total_contacts": total_contacts,
+        "new_contacts": recent_count,
+        "new_contacts_trend": trend,
+        "total_groups": total_groups_count,
+        "top_group": top_group,
+        "avg_importance": avg_importance,
+        "high_priority_count": high_priority_count,
+        "interactions_this_month": interactions_this_month_count,
+        "top_contact": top_contact
+    }
+
+
+def aggregate_charts(contacts: List[Dict], groups: List[Dict], interactions: List[Dict], contact_groups: List[Dict]) -> Dict[str, Any]:
+    # 1. Group Distribution
+    group_counts = defaultdict(int)
+    for cg in contact_groups:
+        group_counts[cg["group_id"]] += 1
+    
+    group_distribution = []
+    for g in groups:
+        count = group_counts.get(g["id"], 0)
+        if count > 0:
+            group_distribution.append({
+                "name": g["name"],
+                "value": count,
+                "color": g["label_color"]
+            })
+    group_distribution.sort(key=lambda x: x["value"], reverse=True)
+
+    # 2. Importance Distribution
+    importance_counts = defaultdict(int)
+    for c in contacts:
+        imp = c.get("importance", 1) or 1
+        importance_counts[imp] += 1
+    
+    importance_distribution = [
+        {"importance": level, "count": importance_counts.get(level, 0)}
+        for level in range(1, 6)
+    ]
+
+    # 3. Location Distribution
+    location_counts = defaultdict(int)
+    for c in contacts:
+        loc = c.get("location")
+        if loc and loc.strip():
+            location_counts[loc] += 1
+    
+    sorted_locations = sorted(location_counts.items(), key=lambda x: x[1], reverse=True)
+    top_locations = [{"location": loc, "count": count} for loc, count in sorted_locations[:10]]
+    
+    other_count = sum(count for _, count in sorted_locations[10:])
+    if other_count > 0:
+        top_locations.append({"location": "Other", "count": other_count})
+
+    # 4. Role Distribution
+    role_counts = defaultdict(int)
+    for c in contacts:
+        role = c.get("current_role")
+        if role and role.strip():
+            role_counts[role] += 1
+    
+    sorted_roles = sorted(role_counts.items(), key=lambda x: x[1], reverse=True)
+    role_distribution = [{"role": role, "count": count} for role, count in sorted_roles[:10]]
+
+    # 5. Interactions Timeline (Last 30 days)
+    now = datetime.now(timezone.utc)
+    thirty_days_ago = now - timedelta(days=30)
+    
+    date_counts = defaultdict(int)
+    for i in interactions:
+        ts = parse_datetime(i["happened_at"])
+        if ts >= thirty_days_ago:
+            date_str = ts.strftime("%Y-%m-%d")
+            date_counts[date_str] += 1
+    
+    timeline = []
+    for i in range(30):
+        d = thirty_days_ago + timedelta(days=i)
+        date_str = d.strftime("%Y-%m-%d")
+        timeline.append({
+            "date": date_str,
+            "count": date_counts.get(date_str, 0)
+        })
+
+    return {
+        "group_distribution": group_distribution,
+        "importance_distribution": importance_distribution,
+        "location_distribution": top_locations,
+        "role_distribution": role_distribution,
+        "interactions_timeline": timeline
+    }
+
+
+def calculate_insights(contacts: List[Dict], contact_groups: List[Dict]) -> Dict[str, Any]:
+    # 1. Role Clusters
+    role_groups = defaultdict(list)
+    for c in contacts:
+        if c.get("current_role"):
+            role_groups[c["current_role"]].append(c["name"])
+    
+    role_clusters = [
+        {"role": role, "count": len(names), "contacts": names[:3]}
+        for role, names in role_groups.items() if len(names) >= 2
+    ]
+    role_clusters.sort(key=lambda x: x["count"], reverse=True)
+
+    # 2. Company Clusters
+    company_groups = defaultdict(lambda: {"names": [], "importances": []})
+    for c in contacts:
+        if c.get("company"):
+            company_groups[c["company"]]["names"].append(c["name"])
+            company_groups[c["company"]]["importances"].append(c.get("importance", 1) or 1)
+    
+    company_clusters = []
+    for company, data in company_groups.items():
+        if len(data["names"]) >= 2:
+            avg_imp = sum(data["importances"]) / len(data["importances"])
+            company_clusters.append({
+                "company": company,
+                "count": len(data["names"]),
+                "avg_importance": avg_importance,
+                "contacts": data["names"][:3]
+            })
+    company_clusters.sort(key=lambda x: (x["count"], x["avg_importance"]), reverse=True)
+
+    # 3. Location Clusters
+    location_groups = defaultdict(list)
+    for c in contacts:
+        if c.get("location"):
+            location_groups[c["location"]].append(c["name"])
+    
+    location_clusters = [
+        {"location": loc, "count": len(names), "contacts": names[:3]}
+        for loc, names in location_groups.items() if len(names) >= 3
+    ]
+    location_clusters.sort(key=lambda x: x["count"], reverse=True)
+
+    return {
+        "role_clusters": role_clusters[:5],
+        "company_clusters": company_clusters[:5],
+        "location_clusters": location_clusters[:5]
+    }
+
+
+def calculate_sidebar_stats(contacts: List[Dict], groups: List[Dict], contact_groups: List[Dict]) -> Dict[str, Any]:
+    # 1. Top Companies
+    company_counts = defaultdict(int)
+    for c in contacts:
+        if c.get("company"):
+            company_counts[c["company"]] += 1
+    top_companies = [
+        {"company": k, "count": v} 
+        for k, v in sorted(company_counts.items(), key=lambda x: x[1], reverse=True)[:5]
+    ]
+
+    # 2. Top Roles
+    role_counts = defaultdict(int)
+    for c in contacts:
+        if c.get("current_role"):
+            role_counts[c["current_role"]] += 1
+    top_roles = [
+        {"role": k, "count": v} 
+        for k, v in sorted(role_counts.items(), key=lambda x: x[1], reverse=True)[:5]
+    ]
+
+    # 3. Recent Contacts
+    # Sort contacts by created_at desc
+    sorted_contacts = sorted(
+        contacts, 
+        key=lambda x: x["created_at"], 
+        reverse=True
+    )
+    recent_contacts = [
+        {
+            "id": c["id"],
+            "name": c["name"],
+            "created_at": c["created_at"],
+            "importance": c.get("importance", 1)
+        }
+        for c in sorted_contacts[:5]
+    ]
+
+    # 4. Growing Groups (Simplified to just size for now as we don't have historical group data easily available without complex queries)
+    # The original query checked created_at of contacts within groups. We can replicate that.
+    thirty_days_ago = datetime.now(timezone.utc) - timedelta(days=30)
+    
+    # Map contact_id to created_at
+    contact_date_map = {c["id"]: parse_datetime(c["created_at"]) for c in contacts}
+    
+    group_growth = defaultdict(int)
+    for cg in contact_groups:
+        c_date = contact_date_map.get(cg["contact_id"])
+        if c_date and c_date >= thirty_days_ago:
+            group_growth[cg["group_id"]] += 1
             
-            count = contact_count_response.count if contact_count_response.count is not None else 0
-            
-            if count > 0:  # Only include groups with contacts
-                distribution.append({
-                    "name": group["name"],
-                    "value": count,
-                    "color": group["label_color"]
-                })
-        
-        return sorted(distribution, key=lambda x: x["value"], reverse=True)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error aggregating group distribution: {str(e)}")
+    growing_groups = []
+    group_map = {g["id"]: g for g in groups}
+    for gid, count in group_growth.items():
+        if gid in group_map:
+            g = group_map[gid]
+            growing_groups.append({
+                "name": g["name"],
+                "color": g["label_color"],
+                "new_count": count
+            })
+    growing_groups.sort(key=lambda x: x["new_count"], reverse=True)
 
-
-def aggregate_importance_distribution(user_id: str) -> List[Dict[str, Any]]:
-    """Aggregate contact distribution by importance level"""
-    try:
-        response = supabase_client.table("contacts") \
-            .select("importance") \
-            .eq("user_id", user_id) \
-            .execute()
+    # 5. Network Health
+    total = len(contacts)
+    if total == 0:
+        network_health = {"score": 0, "completeness": 0, "balance": 0, "coverage": 0}
+    else:
+        # Completeness
+        complete = sum(1 for c in contacts if c.get("company") and c.get("current_role") and c.get("location"))
+        completeness = int((complete / total) * 100)
         
-        if not response.data:
-            return []
-        
-        # Count contacts at each importance level (1-5)
-        importance_counts = {1: 0, 2: 0, 3: 0, 4: 0, 5: 0}
-        
-        for contact in response.data:
-            importance = contact.get("importance", 1)
-            if importance in importance_counts:
-                importance_counts[importance] += 1
-        
-        # Convert to list format
-        distribution = [
-            {"importance": level, "count": count}
-            for level, count in sorted(importance_counts.items())
-        ]
-        
-        return distribution
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error aggregating importance distribution: {str(e)}")
-
-
-def aggregate_location_distribution(user_id: str, limit: int = 10) -> List[Dict[str, Any]]:
-    """Aggregate contact distribution by location (top N)"""
-    try:
-        response = supabase_client.table("contacts") \
-            .select("location") \
-            .eq("user_id", user_id) \
-            .execute()
-        
-        if not response.data:
-            return []
-        
-        # Count contacts per location
-        location_counts = {}
-        for contact in response.data:
-            location = contact.get("location")
-            if location and location.strip():  # Only count non-empty locations
-                location_counts[location] = location_counts.get(location, 0) + 1
-        
-        # Sort by count and get top N
-        sorted_locations = sorted(location_counts.items(), key=lambda x: x[1], reverse=True)
-        top_locations = sorted_locations[:limit]
-        
-        # Calculate "Other" category if there are more locations
-        other_count = sum(count for _, count in sorted_locations[limit:])
-        
-        distribution = [
-            {"location": location, "count": count}
-            for location, count in top_locations
-        ]
-        
-        if other_count > 0:
-            distribution.append({"location": "Other", "count": other_count})
-        
-        return distribution
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error aggregating location distribution: {str(e)}")
-
-
-def aggregate_role_distribution(user_id: str, limit: int = 10) -> List[Dict[str, Any]]:
-    """Aggregate contact distribution by role (top N)"""
-    try:
-        response = supabase_client.table("contacts") \
-            .select("current_role") \
-            .eq("user_id", user_id) \
-            .execute()
-        
-        if not response.data:
-            return []
-        
-        # Count contacts per role
-        role_counts = {}
-        for contact in response.data:
-            role = contact.get("current_role")
-            if role and role.strip():  # Only count non-empty roles
-                role_counts[role] = role_counts.get(role, 0) + 1
-        
-        # Sort by count and get top N
-        sorted_roles = sorted(role_counts.items(), key=lambda x: x[1], reverse=True)
-        top_roles = sorted_roles[:limit]
-        
-        distribution = [
-            {"role": role, "count": count}
-            for role, count in top_roles
-        ]
-        
-        return distribution
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error aggregating role distribution: {str(e)}")
-
-
-# ---------------------------
-# Insights Calculation Functions
-# ---------------------------
-
-def find_role_clusters(user_id: str, min_contacts: int = 2, limit: int = 5) -> List[Dict[str, Any]]:
-    """Find role clusters (roles with 2+ contacts)"""
-    try:
-        response = supabase_client.table("contacts") \
-            .select("id, name, current_role") \
-            .eq("user_id", user_id) \
-            .execute()
-        
-        if not response.data:
-            return []
-        
-        # Group contacts by role
-        role_groups = {}
-        for contact in response.data:
-            role = contact.get("current_role")
-            if role and role.strip():
-                if role not in role_groups:
-                    role_groups[role] = []
-                role_groups[role].append(contact["name"])
-        
-        # Filter clusters with minimum contacts and sort by size
-        clusters = [
-            {
-                "role": role,
-                "count": len(contacts),
-                "contacts": contacts[:3]  # Preview of first 3 contacts
-            }
-            for role, contacts in role_groups.items()
-            if len(contacts) >= min_contacts
-        ]
-        
-        clusters.sort(key=lambda x: x["count"], reverse=True)
-        return clusters[:limit]
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error finding role clusters: {str(e)}")
-
-
-def find_company_clusters(user_id: str, min_contacts: int = 2, limit: int = 5) -> List[Dict[str, Any]]:
-    """Find company clusters (companies with 2+ contacts)"""
-    try:
-        response = supabase_client.table("contacts") \
-            .select("id, name, company, importance") \
-            .eq("user_id", user_id) \
-            .execute()
-        
-        if not response.data:
-            return []
-        
-        # Group contacts by company
-        company_groups = {}
-        for contact in response.data:
-            company = contact.get("company")
-            if company and company.strip():
-                if company not in company_groups:
-                    company_groups[company] = {
-                        "contacts": [],
-                        "importances": []
-                    }
-                company_groups[company]["contacts"].append(contact["name"])
-                company_groups[company]["importances"].append(contact.get("importance", 1))
-        
-        # Filter clusters with minimum contacts and calculate average importance
-        clusters = []
-        for company, data in company_groups.items():
-            if len(data["contacts"]) >= min_contacts:
-                avg_importance = round(sum(data["importances"]) / len(data["importances"]), 1)
-                clusters.append({
-                    "company": company,
-                    "count": len(data["contacts"]),
-                    "avg_importance": avg_importance,
-                    "contacts": data["contacts"][:3]  # Preview of first 3 contacts
-                })
-        
-        # Sort by count, then by average importance
-        clusters.sort(key=lambda x: (x["count"], x["avg_importance"]), reverse=True)
-        return clusters[:limit]
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error finding company clusters: {str(e)}")
-
-
-def find_location_clusters(user_id: str, min_contacts: int = 3, limit: int = 5) -> List[Dict[str, Any]]:
-    """Find location clusters (locations with 3+ contacts)"""
-    try:
-        response = supabase_client.table("contacts") \
-            .select("id, name, location") \
-            .eq("user_id", user_id) \
-            .execute()
-        
-        if not response.data:
-            return []
-        
-        # Group contacts by location
-        location_groups = {}
-        for contact in response.data:
-            location = contact.get("location")
-            if location and location.strip():
-                if location not in location_groups:
-                    location_groups[location] = []
-                location_groups[location].append(contact["name"])
-        
-        # Filter clusters with minimum contacts and sort by size
-        clusters = [
-            {
-                "location": location,
-                "count": len(contacts),
-                "contacts": contacts[:3]  # Preview of first 3 contacts
-            }
-            for location, contacts in location_groups.items()
-            if len(contacts) >= min_contacts
-        ]
-        
-        clusters.sort(key=lambda x: x["count"], reverse=True)
-        return clusters[:limit]
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error finding location clusters: {str(e)}")
-
-
-def calculate_network_health_score(user_id: str) -> Dict[str, Any]:
-    """Calculate network health score based on data completeness, balance, and coverage"""
-    try:
-        response = supabase_client.table("contacts") \
-            .select("id, company, current_role, location, importance") \
-            .eq("user_id", user_id) \
-            .execute()
-        
-        if not response.data:
-            return {
-                "score": 0,
-                "completeness": 0,
-                "balance": 0,
-                "coverage": 0
-            }
-        
-        total_contacts = len(response.data)
-        
-        # Calculate completeness (percentage of contacts with complete information)
-        complete_count = 0
-        for contact in response.data:
-            if (contact.get("company") and contact.get("current_role") and contact.get("location")):
-                complete_count += 1
-        completeness = int((complete_count / total_contacts) * 100) if total_contacts > 0 else 0
-        
-        # Calculate balance (how evenly distributed importance levels are)
-        importance_counts = {1: 0, 2: 0, 3: 0, 4: 0, 5: 0}
-        for contact in response.data:
-            importance = contact.get("importance", 1)
-            if importance in importance_counts:
-                importance_counts[importance] += 1
-        
-        # Calculate standard deviation of importance distribution
-        # Lower deviation = more balanced = better score
-        avg_per_level = total_contacts / 5
-        variance = sum((count - avg_per_level) ** 2 for count in importance_counts.values()) / 5
+        # Balance
+        imp_counts = defaultdict(int)
+        for c in contacts:
+            imp_counts[c.get("importance", 1) or 1] += 1
+        avg_per_level = total / 5
+        variance = sum((count - avg_per_level) ** 2 for count in imp_counts.values()) / 5
         std_dev = variance ** 0.5
-        max_std_dev = total_contacts / 2  # Maximum possible std dev
+        max_std_dev = total / 2
         balance = int((1 - (std_dev / max_std_dev)) * 100) if max_std_dev > 0 else 100
         
-        # Calculate coverage (percentage of contacts in groups)
-        contacts_in_groups_response = supabase_client.table("contact_groups") \
-            .select("contact_id") \
-            .execute()
+        # Coverage
+        grouped_contact_ids = set(cg["contact_id"] for cg in contact_groups)
+        coverage = int((len(grouped_contact_ids) / total) * 100)
         
-        unique_contacts_in_groups = set()
-        if contacts_in_groups_response.data:
-            for cg in contacts_in_groups_response.data:
-                unique_contacts_in_groups.add(cg["contact_id"])
-        
-        coverage = int((len(unique_contacts_in_groups) / total_contacts) * 100) if total_contacts > 0 else 0
-        
-        # Calculate overall score (weighted average)
         score = int((completeness * 0.4) + (balance * 0.3) + (coverage * 0.3))
-        
-        return {
+        network_health = {
             "score": score,
             "completeness": completeness,
             "balance": balance,
             "coverage": coverage
         }
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error calculating network health score: {str(e)}")
+
+    return {
+        "top_companies": top_companies,
+        "top_roles": top_roles,
+        "recent_contacts": recent_contacts,
+        "growing_groups": growing_groups[:5],
+        "network_health": network_health,
+        "priority_contacts": [] 
+    }
 
 
 # ---------------------------
-# Sidebar Widgets Data Functions
-# ---------------------------
-
-def get_top_companies(user_id: str, limit: int = 5) -> List[Dict[str, Any]]:
-    """Get top N companies by contact count"""
-    try:
-        response = supabase_client.table("contacts") \
-            .select("company") \
-            .eq("user_id", user_id) \
-            .execute()
-        
-        if not response.data:
-            return []
-        
-        # Count contacts per company
-        company_counts = {}
-        for contact in response.data:
-            company = contact.get("company")
-            if company and company.strip():
-                company_counts[company] = company_counts.get(company, 0) + 1
-        
-        # Sort and get top N
-        sorted_companies = sorted(company_counts.items(), key=lambda x: x[1], reverse=True)
-        
-        return [
-            {"company": company, "count": count}
-            for company, count in sorted_companies[:limit]
-        ]
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error getting top companies: {str(e)}")
-
-
-def get_top_roles(user_id: str, limit: int = 5) -> List[Dict[str, Any]]:
-    """Get top N roles by contact count"""
-    try:
-        response = supabase_client.table("contacts") \
-            .select("current_role") \
-            .eq("user_id", user_id) \
-            .execute()
-        
-        if not response.data:
-            return []
-        
-        # Count contacts per role
-        role_counts = {}
-        for contact in response.data:
-            role = contact.get("current_role")
-            if role and role.strip():
-                role_counts[role] = role_counts.get(role, 0) + 1
-        
-        # Sort and get top N
-        sorted_roles = sorted(role_counts.items(), key=lambda x: x[1], reverse=True)
-        
-        return [
-            {"role": role, "count": count}
-            for role, count in sorted_roles[:limit]
-        ]
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error getting top roles: {str(e)}")
-
-
-def get_fastest_growing_groups(user_id: str, limit: int = 5) -> List[Dict[str, Any]]:
-    """Get groups with most contacts added in last 30 days"""
-    try:
-        thirty_days_ago = datetime.now(timezone.utc) - timedelta(days=30)
-        
-        # Get all groups for the user
-        groups_response = supabase_client.table("groups") \
-            .select("id, name, label_color") \
-            .eq("user_id", user_id) \
-            .execute()
-        
-        if not groups_response.data:
-            return []
-        
-        growing_groups = []
-        for group in groups_response.data:
-            # Get contacts added to this group in last 30 days
-            # We need to join with contacts to check created_at
-            contact_groups_response = supabase_client.table("contact_groups") \
-                .select("contact_id") \
-                .eq("group_id", group["id"]) \
-                .execute()
-            
-            if not contact_groups_response.data:
-                continue
-            
-            contact_ids = [cg["contact_id"] for cg in contact_groups_response.data]
-            
-            if contact_ids:
-                # Get count of contacts created in last 30 days
-                new_contacts_response = supabase_client.table("contacts") \
-                    .select("id", count="exact") \
-                    .in_("id", contact_ids) \
-                    .gte("created_at", thirty_days_ago.isoformat()) \
-                    .execute()
-                
-                new_count = new_contacts_response.count if new_contacts_response.count is not None else 0
-                
-                if new_count > 0:
-                    growing_groups.append({
-                        "name": group["name"],
-                        "color": group["label_color"],
-                        "new_count": new_count
-                    })
-        
-        # Sort by new_count and return top N
-        growing_groups.sort(key=lambda x: x["new_count"], reverse=True)
-        return growing_groups[:limit]
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error getting fastest growing groups: {str(e)}")
-
-
-def aggregate_interactions_timeline(user_id: str, days: int = 30) -> List[Dict[str, Any]]:
-    """Aggregate interactions by date for the last N days"""
-    try:
-        # Calculate date range
-        now = datetime.now(timezone.utc)
-        start_date = now - timedelta(days=days)
-        
-        # Fetch interactions in date range
-        response = supabase_client.table("interactions") \
-            .select("happened_at") \
-            .eq("user_id", user_id) \
-            .gte("happened_at", start_date.isoformat()) \
-            .execute()
-        
-        if not response.data:
-            # Return empty data points for all days
-            return [
-                {
-                    "date": (start_date + timedelta(days=i)).strftime("%Y-%m-%d"),
-                    "count": 0
-                }
-                for i in range(days)
-            ]
-        
-        # Count interactions by date
-        date_counts = {}
-        for interaction in response.data:
-            date_str = interaction["happened_at"][:10]  # Get YYYY-MM-DD
-            date_counts[date_str] = date_counts.get(date_str, 0) + 1
-        
-        # Create complete timeline with all dates
-        timeline = []
-        for i in range(days):
-            date = start_date + timedelta(days=i)
-            date_str = date.strftime("%Y-%m-%d")
-            timeline.append({
-                "date": date_str,
-                "count": date_counts.get(date_str, 0)
-            })
-        
-        return timeline
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error aggregating interactions timeline: {str(e)}")
-
-
-def get_recent_contacts(user_id: str, limit: int = 5) -> List[Dict[str, Any]]:
-    """Get N most recently created contacts"""
-    try:
-        response = supabase_client.table("contacts") \
-            .select("id, name, created_at, importance") \
-            .eq("user_id", user_id) \
-            .order("created_at", desc=True) \
-            .limit(limit) \
-            .execute()
-        
-        if not response.data:
-            return []
-        
-        return [
-            {
-                "id": contact["id"],
-                "name": contact["name"],
-                "created_at": contact["created_at"],
-                "importance": contact.get("importance", 1)
-            }
-            for contact in response.data
-        ]
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error getting recent contacts: {str(e)}")
-
-
-# ---------------------------
-# Main Dashboard Endpoint
+# Main Endpoint
 # ---------------------------
 
 @router.get("/analytics")
 @limiter.limit(RateLimits.GENERAL)
 def get_dashboard_analytics(request: Request, user=Depends(get_current_user)):
     """
-    Get all dashboard analytics data including KPIs, charts, insights, and sidebar widgets.
-    
-    Returns comprehensive dashboard data in a single API call for optimal performance.
+    Get all dashboard analytics data efficiently.
+    Fetches raw data in bulk and aggregates in memory to minimize DB calls.
     """
     try:
         user_id = user.id
         
-        # Calculate KPIs
-        total_contacts = calculate_total_contacts(user_id)
-        new_contacts_data = calculate_new_contacts(user_id)
-        total_groups = calculate_total_groups(user_id)
-        top_group = find_top_group(user_id)
-        avg_importance = calculate_average_importance(user_id)
-        high_priority_count = count_high_priority_contacts(user_id)
-        interactions_this_month = calculate_interactions_this_month(user_id)
-        top_contact = find_top_contact_by_interactions(user_id)
+        # Fetch all data in 4 main parallel-ready calls
+        contacts, groups, contact_groups, interactions = fetch_dashboard_data(user_id)
         
-        # Aggregate chart data
-        group_distribution = aggregate_group_distribution(user_id)
-        importance_distribution = aggregate_importance_distribution(user_id)
-        location_distribution = aggregate_location_distribution(user_id)
-        role_distribution = aggregate_role_distribution(user_id)
-        interactions_timeline = aggregate_interactions_timeline(user_id, days=30)
+        # Process data in memory
+        kpis = calculate_kpis(contacts, groups, interactions, contact_groups)
+        charts = aggregate_charts(contacts, groups, interactions, contact_groups)
+        insights = calculate_insights(contacts, contact_groups)
+        sidebar = calculate_sidebar_stats(contacts, groups, contact_groups)
         
-        # Calculate insights
-        role_clusters = find_role_clusters(user_id)
-        company_clusters = find_company_clusters(user_id)
-        location_clusters = find_location_clusters(user_id)
-        network_health = calculate_network_health_score(user_id)
-        
-        # Get sidebar widgets data
-        top_companies = get_top_companies(user_id)
-        top_roles = get_top_roles(user_id)
-        growing_groups = get_fastest_growing_groups(user_id)
-        recent_contacts = get_recent_contacts(user_id)
-        
-        # Construct response
-        dashboard_data = {
-            "kpis": {
-                "total_contacts": total_contacts,
-                "new_contacts": new_contacts_data["count"],
-                "new_contacts_trend": new_contacts_data["trend"],
-                "total_groups": total_groups,
-                "top_group": top_group,
-                "avg_importance": avg_importance,
-                "high_priority_count": high_priority_count,
-                "interactions_this_month": interactions_this_month,
-                "top_contact": top_contact
-            },
-            "charts": {
-                "group_distribution": group_distribution,
-                "importance_distribution": importance_distribution,
-                "location_distribution": location_distribution,
-                "role_distribution": role_distribution,
-                "interactions_timeline": interactions_timeline
-            },
-            "insights": {
-                "role_clusters": role_clusters,
-                "company_clusters": company_clusters,
-                "location_clusters": location_clusters
-            },
-            "sidebar": {
-                "top_companies": top_companies,
-                "top_roles": top_roles,
-                "growing_groups": growing_groups,
-                "recent_contacts": recent_contacts,
-                "network_health": network_health,
-                "priority_contacts": []  # Will be populated by frontend based on mode
-            }
+        return {
+            "kpis": kpis,
+            "charts": charts,
+            "insights": insights,
+            "sidebar": sidebar
         }
-        
-        return dashboard_data
-        
-    except HTTPException:
-        raise
+
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error fetching dashboard analytics: {str(e)}")
+        print(f"Dashboard analytics error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))

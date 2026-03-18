@@ -1,6 +1,21 @@
-# Personal CRM
+<div align="center"> 
+  <h1>Personal CRM Project</h1>
 
-Full-stack contact relationship management system.
+
+![GitHub stars](https://img.shields.io/github/stars/dwseoh/personal-crm?style=social)
+![GitHub forks](https://img.shields.io/github/forks/dwseoh/personal-crm?style=social)
+![GitHub repo size](https://img.shields.io/github/repo-size/dwseoh/personal-crm)
+![GitHub top language](https://img.shields.io/github/languages/top/dwseoh/personal-crm)
+![GitHub last commit](https://img.shields.io/github/last-commit/dwseoh/personal-crm?color=red)
+
+</div>
+<br>
+
+
+## Overview
+
+**Personal CRM** is a full-stack contact relationship management system built with modern web technologies. It enables users to organize, track, and analyze their professional and personal networks through an intuitive dashboard, comprehensive contact management, and intelligent insights.
+
 
 ## Tech Stack
 

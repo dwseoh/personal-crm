@@ -5,6 +5,9 @@ from app.core.database import supabase_client
 from app.core.rate_limiter import limiter, RateLimits
 from app.auth import get_current_user
 from datetime import datetime
+import logging
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/interactions", tags=["interactions"])
 
@@ -25,7 +28,7 @@ Database Schema:
 # ---------------------------
 # Models
 # ---------------------------
-class interactionRequest(BaseModel):
+class InteractionRequest(BaseModel):
     """
     Create a new interaction
     
@@ -53,7 +56,7 @@ class interactionRequest(BaseModel):
             raise ValueError('happened_at must be a valid ISO 8601 timestamp')
 
 
-class editInteractionRequest(BaseModel):
+class EditInteractionRequest(BaseModel):
     """
     Update an existing interaction (partial update)
     
@@ -120,10 +123,12 @@ def list_interactions(contact_id: str, request: Request, user=Depends(get_curren
             .execute()
         
         return response.data if response.data else []
-    except HTTPException:
-        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error fetching interactions: {str(e)}")
+        logger.error(f"Error fetching interactions for contact {contact_id}: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to fetch interactions for contact: {str(e)}"
+        )
 
 
 @router.get("/user/all")
@@ -148,7 +153,7 @@ def list_user_interactions(request: Request, user=Depends(get_current_user)):
 
 @router.post("/")
 @limiter.limit(RateLimits.CONTACTS)
-def create_interaction(interaction_request: interactionRequest, request: Request, user=Depends(get_current_user)):
+def create_interaction(interaction_request: InteractionRequest, request: Request, user=Depends(get_current_user)):
     try:
         # Verify contact exists and belongs to user
         contact_check = supabase_client.table("contacts") \
@@ -175,15 +180,17 @@ def create_interaction(interaction_request: interactionRequest, request: Request
 
         return response.data[0]
         
-    except HTTPException:
-        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error creating interaction: {str(e)}")
+        logger.error(f"Error creating interaction for contact {interaction_request.contact_id}: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to create interaction: {str(e)}"
+        )
 
 
 @router.patch("/{interaction_id}")
 @limiter.limit(RateLimits.CONTACTS)
-def edit_interaction(interaction_id: str, edit_request: editInteractionRequest, request: Request, user=Depends(get_current_user)):
+def edit_interaction(interaction_id: str, edit_request: EditInteractionRequest, request: Request, user=Depends(get_current_user)):
     try:
         # Verify interaction exists and belongs to user
         interaction_check = supabase_client.table("interactions") \
@@ -215,10 +222,12 @@ def edit_interaction(interaction_id: str, edit_request: editInteractionRequest, 
 
         return response.data[0]
         
-    except HTTPException:
-        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error updating interaction: {str(e)}")
+        logger.error(f"Error updating interaction {interaction_id}: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to update interaction: {str(e)}"
+        )
 
 
 @router.delete("/{interaction_id}")
@@ -243,7 +252,9 @@ def delete_interaction(interaction_id: str, request: Request, user=Depends(get_c
 
         return {"message": "Interaction deleted successfully"}
         
-    except HTTPException:
-        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error deleting interaction: {str(e)}")
+        logger.error(f"Error deleting interaction {interaction_id}: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to delete interaction: {str(e)}"
+        )

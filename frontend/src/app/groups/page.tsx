@@ -34,7 +34,7 @@ export default function Groups() {
     }
 
     loadGroups();
-  }, [router]);
+  }, []); // Remove router dependency to prevent re-fetch loops
 
   const loadGroups = async () => {
     const token = localStorage.getItem("token");
@@ -228,40 +228,106 @@ export default function Groups() {
             </div>
 
             {filteredGroups.length > 0 ? (
-          <div className="space-y-8">
-            {filteredGroups.map((group) => (
-              <div
-                key={group.id}
-                className="bg-base-200 border border-base-300 rounded-lg overflow-hidden"
-              >
-                {/* Group Header */}
-                <div className="bg-base-300 px-6 py-4 flex items-center justify-between">
-                  <div className="flex items-center space-x-4">
-                    <div
-                      className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-lg"
-                      style={{ backgroundColor: group.color }}
-                    >
-                      {group.name.charAt(0).toUpperCase()}
+              <div className="space-y-8">
+                {filteredGroups.map((group) => (
+                  <div
+                    key={group.id}
+                    className="bg-base-200 border border-base-300 rounded-lg overflow-hidden"
+                  >
+                    {/* Group Header */}
+                    <div className="bg-base-300 px-6 py-4 flex items-center justify-between">
+                      <div className="flex items-center space-x-4">
+                        <div
+                          className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-lg"
+                          style={{ backgroundColor: group.color }}
+                        >
+                          {group.name.charAt(0).toUpperCase()}
+                        </div>
+                        <div>
+                          <h3 className="text-xl font-semibold text-base-content">
+                            {group.name}
+                          </h3>
+                          <p className="text-sm text-base-content opacity-70">
+                            {group.contacts.length} contact{group.contacts.length === 1 ? "" : "s"}
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => {
+                          setGroupToDelete(group);
+                          setShowDeleteModal(true);
+                        }}
+                        className="text-error hover:opacity-70 transition-opacity p-2"
+                        title="Delete group"
+                      >
+                        <svg
+                          className="w-5 h-5"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth="2"
+                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                          />
+                        </svg>
+                      </button>
                     </div>
-                    <div>
-                      <h3 className="text-xl font-semibold text-base-content">
-                        {group.name}
-                      </h3>
-                      <p className="text-sm text-base-content opacity-70">
-                        {group.contacts.length} contact{group.contacts.length === 1 ? "" : "s"}
-                      </p>
+
+                    {/* Contacts List */}
+                    <div className="p-6">
+                      {group.contacts.length > 0 ? (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                          {group.contacts.map((contact) => (
+                            <div
+                              key={contact.id}
+                              className="bg-base-100 border border-base-300 rounded-lg p-4 hover:shadow-md transition-shadow"
+                            >
+                              <div className="flex items-center space-x-3 mb-2">
+                                <div
+                                  className="w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold"
+                                  style={{ backgroundColor: group.color }}
+                                >
+                                  {contact.name.charAt(0).toUpperCase()}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="font-semibold text-base-content truncate">
+                                    {contact.name}
+                                  </p>
+                                </div>
+                              </div>
+                              <p className="text-sm text-base-content opacity-70 truncate">
+                                {contact.email}
+                              </p>
+                              <p className="text-sm text-base-content opacity-70 truncate">
+                                {contact.phone}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-center text-base-content opacity-50 py-8">
+                          No contacts in this group
+                        </p>
+                      )}
                     </div>
                   </div>
-                  <button
-                    onClick={() => {
-                      setGroupToDelete(group);
-                      setShowDeleteModal(true);
-                    }}
-                    className="text-error hover:opacity-70 transition-opacity p-2"
-                    title="Delete group"
-                  >
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-12">
+                <div className="bg-base-200 rounded-lg p-8 max-w-md mx-auto">
+                  <h3 className="text-lg font-semibold text-base-content mb-2">
+                    No groups yet
+                  </h3>
+                  <p className="text-base-content opacity-70 mb-4">
+                    Create your first group to organize your contacts
+                  </p>
+                  <div className="w-16 h-16 bg-base-300 rounded-full mx-auto flex items-center justify-center">
                     <svg
-                      className="w-5 h-5"
+                      className="w-8 h-8 text-base-content opacity-50"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -270,77 +336,11 @@ export default function Groups() {
                         strokeLinecap="round"
                         strokeLinejoin="round"
                         strokeWidth="2"
-                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                        d="M12 4v16m8-8H4"
                       />
                     </svg>
-                  </button>
+                  </div>
                 </div>
-
-                {/* Contacts List */}
-                <div className="p-6">
-                  {group.contacts.length > 0 ? (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                      {group.contacts.map((contact) => (
-                        <div
-                          key={contact.id}
-                          className="bg-base-100 border border-base-300 rounded-lg p-4 hover:shadow-md transition-shadow"
-                        >
-                          <div className="flex items-center space-x-3 mb-2">
-                            <div
-                              className="w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold"
-                              style={{ backgroundColor: group.color }}
-                            >
-                              {contact.name.charAt(0).toUpperCase()}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="font-semibold text-base-content truncate">
-                                {contact.name}
-                              </p>
-                            </div>
-                          </div>
-                          <p className="text-sm text-base-content opacity-70 truncate">
-                            {contact.email}
-                          </p>
-                          <p className="text-sm text-base-content opacity-70 truncate">
-                            {contact.phone}
-                          </p>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-center text-base-content opacity-50 py-8">
-                      No contacts in this group
-                    </p>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-            ) : (
-              <div className="text-center py-12">
-            <div className="bg-base-200 rounded-lg p-8 max-w-md mx-auto">
-              <h3 className="text-lg font-semibold text-base-content mb-2">
-                No groups yet
-              </h3>
-              <p className="text-base-content opacity-70 mb-4">
-                Create your first group to organize your contacts
-              </p>
-              <div className="w-16 h-16 bg-base-300 rounded-full mx-auto flex items-center justify-center">
-                <svg
-                  className="w-8 h-8 text-base-content opacity-50"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M12 4v16m8-8H4"
-                  />
-                </svg>
-              </div>
-            </div>
               </div>
             )}
           </>

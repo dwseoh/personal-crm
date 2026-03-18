@@ -2,63 +2,24 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from app.core.database import supabase_client
 from app.core.rate_limiter import limiter, RateLimits
 from app.auth import get_current_user
+from app.utils.scoring import calculate_priority_scores
 from datetime import datetime, timedelta, timezone
 from typing import Dict, List, Any
-from collections import defaultdict
 import math
+import logging
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/analytics", tags=["analytics"])
 
 # ---------------------------
-# Weight Vectors for Priority Scoring
-# ---------------------------
-WEIGHT_VECTORS = {
-    "default": {
-        "days_since_last_interaction": 0.4,
-        "total_interactions_30d": 0.2,
-        "total_interactions_365d": 0.1,
-        "inbound_30d": 0.15,
-        "outbound_30d": 0.15
-    },
-    "career": {
-        "days_since_last_interaction": 0.3,
-        "total_interactions_30d": 0.2,
-        "total_interactions_365d": 0.2,
-        "inbound_30d": 0.15,
-        "outbound_30d": 0.15
-    },
-    "social": {
-        "days_since_last_interaction": 0.5,
-        "total_interactions_30d": 0.15,
-        "total_interactions_365d": 0.1,
-        "inbound_30d": 0.15,
-        "outbound_30d": 0.1
-    }
-}
-
-# ---------------------------
 # Feature Matrix Construction
 # ---------------------------
-# ---------------------------
-# Caching for Feature Matrix
-# ---------------------------
-_feature_matrix_cache: Dict[str, Dict] = {}
-CACHE_TTL_SECONDS = 300  # 5 minutes
-
-def get_cached_feature_matrix(user_id: str) -> Dict[str, Dict[str, float]]:
-    now = datetime.now(timezone.utc)
-    
-    if user_id in _feature_matrix_cache:
-        timestamp, data = _feature_matrix_cache[user_id]
-        if (now - timestamp).total_seconds() < CACHE_TTL_SECONDS:
-            return data
-            
-    # Rebuild cache
-    data = build_interaction_feature_matrix(user_id)
-    _feature_matrix_cache[user_id] = (now, data)
-    return data
-
 def build_interaction_feature_matrix(user_id: str) -> Dict[str, Dict[str, float]]:
+    """
+    Build feature matrix for all contacts of a user.
+    Returns a dict mapping contact_id to feature dict.
+    """
     try:
         now = datetime.now(timezone.utc)
         thirty_days_ago = now - timedelta(days=30)
@@ -88,6 +49,7 @@ def build_interaction_feature_matrix(user_id: str) -> Dict[str, Dict[str, float]
         interactions = interactions_response.data or []
 
         # Pre-group interactions by contact
+        from collections import defaultdict
         interaction_map = defaultdict(list)
         for i in interactions:
             interaction_map[i["contact_id"]].append(i)
@@ -97,7 +59,7 @@ def build_interaction_feature_matrix(user_id: str) -> Dict[str, Dict[str, float]
         for contact in contacts_response.data:
             contact_id = contact["id"]
             contact_name = contact["name"]
-            importance = contact.get("importance", 1)  # Default to 1 if not set
+            importance = contact.get("importance", 1)
             contact_interactions = interaction_map.get(contact_id, [])
 
             # No interactions
@@ -122,7 +84,8 @@ def build_interaction_feature_matrix(user_id: str) -> Dict[str, Dict[str, float]
                     if ts.tzinfo is None:
                         ts = ts.replace(tzinfo=timezone.utc)
                     parsed.append({"happened_at": ts, "direction": i.get("direction")})
-                except Exception:
+                except Exception as e:
+                    logger.warning(f"Failed to parse interaction: {e}")
                     continue
 
             if not parsed:
@@ -165,85 +128,11 @@ def build_interaction_feature_matrix(user_id: str) -> Dict[str, Dict[str, float]
         return feature_matrix
 
     except Exception as e:
+        logger.error(f"Error building feature matrix: {e}")
         raise HTTPException(
             status_code=500,
-            detail=f"Error building feature matrix: {str(e)}"
+            detail=f"Failed to build feature matrix: {str(e)}"
         )
-
-# ---------------------------
-# Priority Scoring
-# ---------------------------
-def score_contacts(
-    user_id: str,
-    mode: str = "default",
-    limit: int = 10
-) -> List[Dict[str, Any]]:
-
-    if mode not in WEIGHT_VECTORS:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Invalid mode. Choose from {list(WEIGHT_VECTORS.keys())}"
-        )
-
-    weights = WEIGHT_VECTORS[mode]
-    feature_matrix = get_cached_feature_matrix(user_id)
-
-    if not feature_matrix:
-        return []
-
-    scored = []
-
-    for cid, f in feature_matrix.items():
-        norm_days = min(f["days_since_last_interaction"] / 365.0, 1.0)
-        norm_total_30d = min(f["total_interactions_30d"] / 50.0, 1.0)
-        norm_total_365d = min(f["total_interactions_365d"] / 200.0, 1.0)
-        norm_inbound_30d = min(f["inbound_30d"] / 25.0, 1.0)
-        norm_outbound_30d = min(f["outbound_30d"] / 25.0, 1.0)
-        norm_importance = (f["importance"] - 1) / 4.0  # Normalize 1-5 to 0-1
-
-        # Base interaction score (80% weight)
-        interaction_score = (
-            weights["days_since_last_interaction"] * norm_days +
-            weights["total_interactions_30d"] * (1 - norm_total_30d) +
-            weights["total_interactions_365d"] * (1 - norm_total_365d) +
-            weights["inbound_30d"] * (1 - norm_inbound_30d) +
-            weights["outbound_30d"] * (1 - norm_outbound_30d)
-        )
-        
-        # Final score: 80% interaction-based + 20% importance-based
-        score = (0.8 * interaction_score) + (0.2 * norm_importance)
-
-        scored.append({
-            "contact_id": cid,
-            "contact_name": f["contact_name"],
-            "importance": f["importance"],
-            "score": round(score * 100, 1),
-            "explanation": generate_priority_explanation(f),
-            "days_since_last_interaction": int(f["days_since_last_interaction"]),
-            "total_interactions_30d": f["total_interactions_30d"]
-        })
-
-    scored.sort(key=lambda x: x["score"], reverse=True)
-    return scored[:limit]
-
-# ---------------------------
-# Explanation Generator
-# ---------------------------
-def generate_priority_explanation(features: Dict[str, Any]) -> str:
-    days = int(features["days_since_last_interaction"])
-    total_30d = features["total_interactions_30d"]
-
-    if days > 180:
-        return f"No interaction in {days} days"
-    if days > 90:
-        return f"Last contact {days} days ago"
-    if days > 30:
-        return f"{days} days since last interaction"
-    if total_30d == 0:
-        return "No recent activity"
-    if total_30d < 2:
-        return "Low recent activity"
-    return "Maintain regular contact"
 
 # ---------------------------
 # Similarity Analysis
@@ -253,8 +142,10 @@ def get_similar_contacts(
     contact_id: str,
     limit: int = 5
 ) -> List[Dict[str, Any]]:
-
-    feature_matrix = get_cached_feature_matrix(user_id)
+    """
+    Find contacts with similar interaction patterns using cosine similarity.
+    """
+    feature_matrix = build_interaction_feature_matrix(user_id)
 
     if contact_id not in feature_matrix:
         return []
@@ -314,7 +205,41 @@ def get_priority_contacts(
     mode: str = "default",
     limit: int = 10
 ):
-    return score_contacts(user.id, mode, limit)
+    """
+    Get priority contacts using the consolidated scoring algorithm.
+    Uses caching for improved performance.
+    """
+    try:
+        # Fetch contacts and interactions
+        contacts_response = supabase_client.table("contacts") \
+            .select("*") \
+            .eq("user_id", user.id) \
+            .execute()
+        
+        interactions_response = supabase_client.table("interactions") \
+            .select("*") \
+            .eq("user_id", user.id) \
+            .execute()
+        
+        contacts = contacts_response.data or []
+        interactions = interactions_response.data or []
+        
+        # Use consolidated scoring with caching
+        cache_key = f"priority_{user.id}_{mode}_{limit}"
+        return calculate_priority_scores(
+            contacts=contacts,
+            interactions=interactions,
+            limit=limit,
+            mode=mode,
+            use_cache=True,
+            cache_key=cache_key
+        )
+    except Exception as e:
+        logger.error(f"Error fetching priority contacts: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to fetch priority contacts: {str(e)}"
+        )
 
 @router.get("/similar-contacts/{contact_id}")
 @limiter.limit(RateLimits.GENERAL)
@@ -324,4 +249,14 @@ def get_similar_contacts_endpoint(
     user=Depends(get_current_user),
     limit: int = 5
 ):
-    return get_similar_contacts(user.id, contact_id, limit)
+    """
+    Find contacts with similar interaction patterns.
+    """
+    try:
+        return get_similar_contacts(user.id, contact_id, limit)
+    except Exception as e:
+        logger.error(f"Error finding similar contacts: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to find similar contacts: {str(e)}"
+        )

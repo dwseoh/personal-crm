@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware  # Add this import
+from fastapi.middleware.cors import CORSMiddleware
 from app.auth import router as auth_router
 from app.routes.contacts import router as contacts_router
 from app.routes.user import router as user_router
@@ -8,12 +8,9 @@ from app.routes.dashboard import router as dashboard_router
 from app.routes.interactions import router as interactions_router
 from app.routes.analytics import router as analytics_router
 
-#app.db
-# .database
+app = FastAPI(title="Personal CRM API", version="1.0.0")
 
-app = FastAPI()
-
-# CORS for your frontend (uncomment this)
+# CORS configuration
 origins = ["http://localhost:3000"]
 app.add_middleware(
     CORSMiddleware,
@@ -23,7 +20,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Routers - remove the prefix since it's already defined in auth.py
+# Register routers
 app.include_router(auth_router)
 app.include_router(user_router)
 app.include_router(groups_router)
@@ -36,22 +33,4 @@ app.include_router(analytics_router)
 @app.get("/")
 def root():
     return {"message": "Personal CRM Backend is running 🚀"}
-
-
-'''
-# Include your routes
-app.include_router(contacts.router, prefix="/contacts", dependencies=[Depends(verify_token)])
-#make it user information based 
-'''
-'''
-#python3 -m venv venv
-run this --> source venv/bin/activate   # Mac/Linux
-run this --> pip freeze > requirements.txt
-
-uvicorn app.main:app --reload
-
-source /Users/jamieseoh/Documents/Projects/personal-crm/backend/venv/bin/activate
-
-
-'''
 

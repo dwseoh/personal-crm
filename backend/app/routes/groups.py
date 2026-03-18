@@ -28,43 +28,66 @@ class editGroupRequest(BaseModel):
 @limiter.limit(RateLimits.GROUPS)
 def list_groups(request: Request, user=Depends(get_current_user), include_contacts: bool = False):
     try:
-        response = supabase_client.table("groups") \
+        # Fetch all groups for the user
+        groups_response = supabase_client.table("groups") \
             .select("*") \
             .eq("user_id", user.id) \
             .execute()
         
-        # Map label_color to color for frontend consistency
         groups = []
-        for group in response.data:
-            group_data = dict(group)
-            if "label_color" in group_data:
-                group_data["color"] = group_data["label_color"]
+        groups_data = groups_response.data or []
+        
+        # If we need contacts, fetch them all in bulk
+        contact_map = defaultdict(list)
+        if include_contacts and groups_data:
+            from collections import defaultdict
             
-            # If include_contacts is True, fetch contacts for this group
-            if include_contacts:
-                try:
-                    # Get contact IDs from junction table
-                    contact_groups_response = supabase_client.table("contact_groups") \
-                        .select("contact_id") \
-                        .eq("group_id", group_data["id"]) \
+            # 1. Get all group IDs
+            group_ids = [g["id"] for g in groups_data]
+            
+            # 2. Fetch all contact-group associations for these groups
+            if group_ids:
+                cg_response = supabase_client.table("contact_groups") \
+                    .select("group_id, contact_id") \
+                    .in_("group_id", group_ids) \
+                    .execute()
+                
+                cg_data = cg_response.data or []
+                
+                # 3. Get all unique contact IDs
+                all_contact_ids = list(set(cg["contact_id"] for cg in cg_data))
+                
+                # 4. Fetch all referenced contacts in one query
+                if all_contact_ids:
+                    contacts_response = supabase_client.table("contacts") \
+                        .select("*") \
+                        .eq("user_id", user.id) \
+                        .in_("id", all_contact_ids) \
                         .execute()
                     
-                    contact_ids = [cg["contact_id"] for cg in contact_groups_response.data] if contact_groups_response.data else []
+                    # Create a map of contact_id -> contact_obj
+                    contacts_lookup = {c["id"]: c for c in contacts_response.data}
                     
-                    if contact_ids:
-                        # Get contacts
-                        contacts_response = supabase_client.table("contacts") \
-                            .select("*") \
-                            .eq("user_id", user.id) \
-                            .in_("id", contact_ids) \
-                            .execute()
-                        group_data["contacts"] = contacts_response.data
-                    else:
-                        group_data["contacts"] = []
-                except Exception:
-                    group_data["contacts"] = []
+                    # 5. Build the map of group_id -> list[contacts]
+                    for cg in cg_data:
+                        c_id = cg["contact_id"]
+                        g_id = cg["group_id"]
+                        if c_id in contacts_lookup:
+                            contact_map[g_id].append(contacts_lookup[c_id])
+
+        # Assemble the final response
+        for group in groups_data:
+            g_dict = dict(group)
             
-            groups.append(group_data)
+            # Map label_color to color for frontend consistency
+            if "label_color" in g_dict:
+                g_dict["color"] = g_dict["label_color"]
+            
+            # Attach contacts if requested
+            if include_contacts:
+                g_dict["contacts"] = contact_map.get(g_dict["id"], [])
+                
+            groups.append(g_dict)
         
         return groups
     except Exception as e:

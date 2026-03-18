@@ -3,6 +3,9 @@ from pydantic import BaseModel, Field
 from app.core.database import supabase_client
 from app.core.rate_limiter import limiter, RateLimits
 from app.auth import get_current_user
+import logging
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/contacts", tags=["contacts"])
 
@@ -22,7 +25,7 @@ class ContactRequest(BaseModel):
     groups: list[str] = Field(default_factory=list)
 
 
-class editContactRequest(BaseModel):
+class EditContactRequest(BaseModel):
     name: str | None = None
     email: str | None = None
     phone: str | None = None
@@ -46,26 +49,40 @@ def list_contacts(request: Request, user=Depends(get_current_user), include_grou
             .eq("user_id", user.id) \
             .execute()
         
-        contacts = response.data
+        contacts = response.data or []
         
-        # If include_groups is True, fetch groups for each contact
-        if include_groups:
-            for contact in contacts:
-                try:
-                    # Get group IDs from junction table
-                    contact_groups_response = supabase_client.table("contact_groups") \
-                        .select("group_id") \
-                        .eq("contact_id", contact["id"]) \
-                        .execute()
+        # If include_groups is True, fetch groups for all contacts in bulk
+        if include_groups and contacts:
+            from collections import defaultdict
+            
+            # 1. Get all contact IDs
+            contact_ids = [c["id"] for c in contacts]
+            
+            # 2. Fetch all contact-group associations
+            if contact_ids:
+                cg_response = supabase_client.table("contact_groups") \
+                    .select("contact_id, group_id") \
+                    .in_("contact_id", contact_ids) \
+                    .execute()
+                
+                cg_data = cg_response.data or []
+                
+                # 3. Build map of contact_id -> list[group_id]
+                group_map = defaultdict(list)
+                for cg in cg_data:
+                    group_map[cg["contact_id"]].append(cg["group_id"])
                     
-                    group_ids = [cg["group_id"] for cg in contact_groups_response.data] if contact_groups_response.data else []
-                    contact["group_ids"] = group_ids
-                except Exception:
-                    contact["group_ids"] = []
+                # 4. Attach group IDs to contacts
+                for contact in contacts:
+                    contact["group_ids"] = group_map.get(contact["id"], [])
         
         return contacts
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error fetching contacts: {str(e)}")
+        logger.error(f"Error listing contacts for user: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to fetch contacts: {str(e)}"
+        )
 
 
 
@@ -130,11 +147,12 @@ def create_contact(contact_request: ContactRequest, request: Request, user=Depen
 
         return created_contact
         
-    except HTTPException:
-        # Re-raise HTTP exceptions as-is
-        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error creating contact: {str(e)}")
+        logger.error(f"Error creating contact '{contact_request.name}': {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to create contact: {str(e)}"
+        )
 
 
 @router.delete("/{contact_id}")
@@ -152,13 +170,17 @@ def delete_contact(contact_id: str, request: Request, user=Depends(get_current_u
 
         return {"message": "Contact deleted"}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error deleting contact: {str(e)}")
+        logger.error(f"Error deleting contact {contact_id}: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to delete contact: {str(e)}"
+        )
 
 
 # need to edit this to reflect new schema changes 
 @router.patch("/{contact_id}")
 @limiter.limit(RateLimits.CONTACTS)
-def edit_contact(contact_id: str, edit_request: editContactRequest, request: Request, user=Depends(get_current_user)):
+def edit_contact(contact_id: str, edit_request: EditContactRequest, request: Request, user=Depends(get_current_user)):
     try:
         # Verify contact exists and belongs to user
         contact_check = supabase_client.table("contacts") \
@@ -230,10 +252,12 @@ def edit_contact(contact_id: str, edit_request: editContactRequest, request: Req
 
         return updated_contact.data[0] if updated_contact.data else {}
         
-    except HTTPException:
-        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error updating contact: {str(e)}")
+        logger.error(f"Error updating contact {contact_id}: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to update contact: {str(e)}"
+        )
 
 
 @router.get("/{contact_id}/groups")
@@ -264,8 +288,10 @@ def get_contact_groups(contact_id: str, request: Request, user=Depends(get_curre
                     groups.append(item["groups"])
         
         return groups
-    except HTTPException:
-        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error fetching contact groups: {str(e)}")
+        logger.error(f"Error fetching groups for contact {contact_id}: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to fetch contact groups: {str(e)}"
+        )
 
